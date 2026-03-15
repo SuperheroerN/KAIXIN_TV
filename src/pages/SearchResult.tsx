@@ -179,8 +179,60 @@ export default function SearchResult() {
         })
       }
 
+      // 检查缓存
+      const cached = getCachedResults(keyword)
+      const selectedApiIds = selectedAPIs.map(api => api.id)
+
+      if (cached) {
+        console.log('找到缓存的搜索结果:', cached)
+
+        // 创建源优先级映射
+        const sourcePriorityMap = new Map<string, number>()
+        selectedAPIs.forEach((api, index) => {
+          sourcePriorityMap.set(api.id, index)
+        })
+
+        // 对缓存结果按当前源顺序重新排序
+        const sortedCachedResults = [...cached.results].sort((a, b) => {
+          const priorityA = sourcePriorityMap.get(a.source_code || '') ?? 999
+          const priorityB = sourcePriorityMap.get(b.source_code || '') ?? 999
+          return priorityA - priorityB
+        })
+
+        // 立即显示排序后的缓存结果
+        setSearchRes(sortedCachedResults)
+
+        // 检查是否所有 API 都已完成搜索
+        if (cached.isComplete) {
+          console.log('缓存已完成所有 API 搜索')
+          setLoading(false)
+          return
+        }
+
+        // 计算还需要搜索的 API
+        const remainingAPIs = selectedAPIs.filter(api => !cached.completedApiIds.includes(api.id))
+
+        if (remainingAPIs.length === 0) {
+          console.log('所有选中的 API 都已缓存')
+          setLoading(false)
+          // 标记为完成
+          updateCachedResults(keyword, [], selectedApiIds, true)
+          return
+        }
+
+        console.log(
+          `还需搜索 ${remainingAPIs.length} 个 API:`,
+          remainingAPIs.map(a => a.name),
+        )
+
+        // 继续搜索剩余的 API
+        setLoading(true)
+        await searchAPIs(remainingAPIs, cached.results, cached.completedApiIds)
+        return
+      }
+
       // 没有缓存,从头开始搜索
-      console.log('开始全新搜索')
+      console.log('没有缓存,开始全新搜索')
       setSearchRes([])
       await searchAPIs(selectedAPIs, [], [])
     },
