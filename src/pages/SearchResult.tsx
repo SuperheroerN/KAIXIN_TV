@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { type VideoItem } from '@/types'
 import { useApiStore } from '@/store/apiStore'
 import { useSearchStore } from '@/store/searchStore'
+import type { SearchCacheItem } from '@/store/searchStore'
 import {
   Card,
   CardFooter,

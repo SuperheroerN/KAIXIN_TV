@@ -11,7 +11,7 @@ const MAX_CACHE_SIZE = 10
 const DEFAULT_CACHE_EXPIRY_HOURS = 24
 
 // 缓存项接口
-interface SearchCacheItem {
+export interface SearchCacheItem {
   results: VideoItem[] // 搜索结果
   completedApiIds: string[] // 已完成搜索的 API ID 列表
   isComplete: boolean // 是否已完成所有 API 的搜索
