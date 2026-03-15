@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Referrer 策略：避免泄露来源信息 -->
+    <meta name="referrer" content="no-referrer" />
+    <!-- 禁止移动端缩放：注意会影响无障碍可访问性（视力障碍用户无法放大） -->
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0,user-scalable=no"
+    />
+    <title>KAIXIN TV</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#ffffff" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      /* 额外保险（主要针对旧版 iOS Safari 的双指/三指手势） */
+      document.addEventListener(
+        'gesturestart',
+        function (e) {
+          e.preventDefault()
+        },
+        { passive: false },
+      )
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

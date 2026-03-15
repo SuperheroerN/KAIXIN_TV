@@ -1,0 +1,38 @@
+# Cloudflare Pages 忽略文件
+# 减少上传大小，加快部署速度
+
+# 依赖
+node_modules/
+
+# 源代码（只需要构建产物）
+src/
+public/
+
+# 配置文件
+.env*
+.git/
+.vscode/
+.idea/
+
+# 文档
+*.md
+!README.md
+
+# 测试和开发文件
+*.test.*
+*.spec.*
+__tests__/
+
+# 其他构建产物
+dist-ssr/
+*.local
+*.log
+
+# TypeScript
+tsconfig.json
+tsconfig.tsbuildinfo
+
+# 编辑器
+.DS_Store
+*.swp
+*.swo
