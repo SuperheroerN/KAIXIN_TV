@@ -17,17 +17,17 @@ export default function PlaybackSettings() {
   return (
     <div className="flex flex-col gap-6 px-4 md:px-0">
       <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold text-gray-800">播放设置</h1>
-        <p className="text-xs text-gray-500">自定义播放体验和观看习惯</p>
+        <h1 className="text-xl font-semibold text-fg">播放设置</h1>
+        <p className="text-xs text-muted-fg">自定义播放体验和观看习惯</p>
       </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white/40 p-4 backdrop-blur-md md:p-6">
-        <h2 className="mb-4 text-sm font-medium text-gray-900">通用</h2>
+      <div className="rounded-lg border border-line bg-surface-2 p-4 backdrop-blur-md md:p-6">
+        <h2 className="mb-4 text-sm font-medium text-fg">通用</h2>
         <div className="flex flex-col gap-6">
           <div className="flex flex-row items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label className="text-base">开启观看记录</Label>
-              <p className="text-sm text-gray-500">自动记录您的观看进度</p>
+              <p className="text-sm text-muted-fg">自动记录您的观看进度</p>
             </div>
             <Switch
               checked={playback.isViewingHistoryEnabled}
@@ -38,7 +38,7 @@ export default function PlaybackSettings() {
           <div className="flex flex-row items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label className="text-base">自动续播</Label>
-              <p className="text-sm text-gray-500">这一集播放完后自动播放下一集</p>
+              <p className="text-sm text-muted-fg">这一集播放完后自动播放下一集</p>
             </div>
             <Switch
               checked={playback.isAutoPlayEnabled}
@@ -49,7 +49,7 @@ export default function PlaybackSettings() {
           <div className="flex flex-row items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label className="text-base">跳过切片广告</Label>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-fg">
                 尝试检测并跳过 #EXT-X-DISCONTINUITY 标记的广告片段
               </p>
             </div>
@@ -61,12 +61,12 @@ export default function PlaybackSettings() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white/40 p-4 backdrop-blur-md md:p-6">
-        <h2 className="mb-4 text-sm font-medium text-gray-900">显示</h2>
+      <div className="rounded-lg border border-line bg-surface-2 p-4 backdrop-blur-md md:p-6">
+        <h2 className="mb-4 text-sm font-medium text-fg">显示</h2>
         <div className="flex flex-row items-center justify-between gap-1.5">
           <div className="space-y-0.5">
             <Label htmlFor="order">剧集默认显示顺序</Label>
-            <p className="text-xs text-gray-500">详情页剧集列表的默认排列顺序</p>
+            <p className="text-xs text-muted-fg">详情页剧集列表的默认排列顺序</p>
           </div>
           <div className="w-[180px]">
             <Select

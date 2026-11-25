@@ -88,7 +88,7 @@ const VERSION_UPDATES: VersionUpdate[] = [
       '优化代理服务：统一了不同部署方式的请求处理逻辑',
     ],
     fixes: ['修复 Firefox 浏览器下搜索结果为 0 的问题', '改进请求超时和错误处理，提升稳定性'],
-    breaking: ['⚠️ Docker 用户请重新构建镜像以应用修复：docker-compose up -d --build'],
+    breaking: [],
   },
   {
     version: '1.2.5',
@@ -163,7 +163,7 @@ const VERSION_UPDATES: VersionUpdate[] = [
     ],
     fixes: ['优化了视频源管理功能', '优化视频搜索逻辑，增快搜索速度'],
     breaking: [
-      '旧版域名https://tv.new.ouonnki.site即将失效,请尽快使用新版域名访问https://tv.ouonnki.site',
+      '站点域名迁移的相关提示已移除',
     ],
   },
   {

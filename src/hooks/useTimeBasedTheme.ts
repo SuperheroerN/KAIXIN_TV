@@ -13,8 +13,10 @@ export function useTimeBasedTheme() {
   useEffect(() => {
     if (isNightMode) {
       document.body.classList.add('night-mode')
+      document.documentElement.classList.add('dark')
     } else {
       document.body.classList.remove('night-mode')
+      document.documentElement.classList.remove('dark')
     }
     // 保存到 localStorage
     localStorage.setItem('theme-mode', isNightMode ? 'night' : 'day')

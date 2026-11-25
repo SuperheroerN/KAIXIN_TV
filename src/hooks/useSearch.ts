@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router'
 import { useSearchStore } from '@/store/searchStore'
-import { trackEvent } from '@/config/analytics.config'
 
 export const useSearch = () => {
   const navigate = useNavigate()
@@ -9,22 +8,17 @@ export const useSearch = () => {
   const { query: search, setQuery: setSearch, addSearchHistoryItem, clearQuery } = useSearchStore()
 
   const searchMovie = (query: string, isNavigating: boolean = true) => {
-    if (query.trim().length > 0) {
+    const trimmed = query.trim()
+    if (trimmed.length > 0) {
       // 设置当前搜索查询
-      setSearch(query)
+      setSearch(trimmed)
 
       // 添加到搜索历史
-      addSearchHistoryItem(query)
-
-      // 跟踪搜索事件
-      trackEvent('search', {
-        query: query,
-        timestamp: new Date().toISOString(),
-      })
+      addSearchHistoryItem(trimmed)
 
       // 导航到搜索页面
       if (isNavigating) {
-        navigate(`/search/${query}`)
+        navigate(`/search/${encodeURIComponent(trimmed)}`)
       }
     }
   }

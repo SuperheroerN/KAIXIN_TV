@@ -1,5 +1,5 @@
 import type { Plugin } from 'vite'
-import { handleProxyRequest, getTargetUrl } from '../utils/proxy'
+import { handleProxyRequest, getTargetUrl, cacheControlFor } from '../utils/proxy'
 
 export function proxyMiddleware(): Plugin {
   return {
@@ -20,7 +20,7 @@ export function proxyMiddleware(): Plugin {
           // 设置响应头
           res.setHeader('Access-Control-Allow-Origin', '*')
           res.setHeader('Content-Type', contentType)
-          res.setHeader('Cache-Control', 'public, max-age=86400') // 缓存1天
+          res.setHeader('Cache-Control', cacheControlFor(contentType))
           
           // 根据内容类型处理响应
           if (contentType.includes('image')) {

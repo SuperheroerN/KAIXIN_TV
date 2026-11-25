@@ -106,7 +106,7 @@ export default function SourceTestButton({ source }: { source: VideoApi }) {
           resultCount,
         })
         toast.success(`${source.name} 支持搜索功能 (${responseTime}ms)`)
-      } catch (e) {
+      } catch {
         setTestResult({
           status: 'error',
           message: 'JSON解析失败',
@@ -157,7 +157,7 @@ export default function SourceTestButton({ source }: { source: VideoApi }) {
       case 'error':
         return 'text-red-600'
       default:
-        return 'text-gray-600'
+        return 'text-fg-soft'
     }
   }
 
@@ -185,7 +185,7 @@ export default function SourceTestButton({ source }: { source: VideoApi }) {
           {getStatusIcon()}
           <span>{testResult.message}</span>
           {testResult.responseTime && (
-            <span className="text-xs text-gray-500">({testResult.responseTime}ms)</span>
+            <span className="text-xs text-muted-fg">({testResult.responseTime}ms)</span>
           )}
         </div>
       )}

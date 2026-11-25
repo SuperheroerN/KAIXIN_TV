@@ -137,7 +137,7 @@ function VideoSourceFormItem<T extends FieldValues>({
         />
         <div className="flex w-40 items-center justify-end gap-2">
           <Checkbox checked={isRandomId} onCheckedChange={handleRandomIdChange} disabled={true} />
-          <Label className="text-gray-400">使用随机ID</Label>
+          <Label className="text-muted-fg">使用随机ID</Label>
         </div>
       </div>
     </InputFormItem>
@@ -309,13 +309,13 @@ export default function VideoSourceForm({ sourceInfo, readOnly = false }: { sour
           <div className="flex items-end justify-between">
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <span className="text-red-600 hover:cursor-pointer hover:text-red-500 hover:underline">
+                <span className="text-red-600 hover:cursor-pointer hover:text-brand hover:underline">
                   删除本视频源
                 </span>
               </AlertDialogTrigger>
               <AlertDialogContent
-                className="h-fit bg-white/20 backdrop-blur-md"
-                overlayClassName="bg-white/40 backdrop-blur-xs"
+                className="h-fit bg-surface-2 backdrop-blur-md"
+                overlayClassName="bg-surface-2 backdrop-blur-xs"
               >
                 <AlertDialogHeader>
                   <AlertDialogTitle>确定要删除本视频源吗？</AlertDialogTitle>
@@ -325,12 +325,12 @@ export default function VideoSourceForm({ sourceInfo, readOnly = false }: { sour
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel className="border-0 bg-transparent shadow-none outline-0 hover:bg-transparent hover:text-gray-600">
+                  <AlertDialogCancel className="border-0 bg-transparent shadow-none outline-0 hover:bg-transparent hover:text-fg-soft">
                     取消
                   </AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => handleDelete(sourceInfo.id)}
-                    className="bg-red-600 hover:bg-red-500"
+                    className="bg-brand hover:bg-brand"
                   >
                     确定删除
                   </AlertDialogAction>

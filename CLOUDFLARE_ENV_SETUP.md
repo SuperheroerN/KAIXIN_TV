@@ -19,7 +19,7 @@
    
    **变量值（简单格式）：**
    ```
-   无尽资源|https://api.wujinapi.me/api.php/provide/vod,茅台资源|https://caiji.maotaizy.cc/api.php/provide/vod,猫眼资源|https://api.maoyanapi.top/api.php/provide/vod,百度资源|https://api.apibdzy.com/api.php/provide/vod,红牛资源|https://www.hongniuzy2.com/api.php/provide/vod
+   猫眼资源|https://api.maoyanapi.top/api.php/provide/vod,百度资源|https://api.apibdzy.com/api.php/provide/vod,红牛资源|https://www.hongniuzy2.com/api.php/provide/vod,U酷资源|https://api.ukuapi88.com/api.php/provide/vod
    ```
 
 3. **格式说明**
@@ -40,7 +40,7 @@
 
 **变量值（JSON格式，必须单行）：**
 ```
-[{"name":"无尽资源","url":"https://api.wujinapi.me/api.php/provide/vod","isEnabled":true},{"name":"茅台资源","url":"https://caiji.maotaizy.cc/api.php/provide/vod","isEnabled":true},{"name":"猫眼资源","url":"https://api.maoyanapi.top/api.php/provide/vod","isEnabled":true}]
+[{"name":"猫眼资源","url":"https://api.maoyanapi.top/api.php/provide/vod","isEnabled":true},{"name":"百度资源","url":"https://api.apibdzy.com/api.php/provide/vod","isEnabled":true},{"name":"红牛资源","url":"https://www.hongniuzy2.com/api.php/provide/vod","isEnabled":true},{"name":"U酷资源","url":"https://api.ukuapi88.com/api.php/provide/vod","isEnabled":true}]
 ```
 
 ⚠️ **注意：**
@@ -79,13 +79,13 @@
 ### 简单格式（复制使用）
 
 ```
-无尽资源|https://api.wujinapi.me/api.php/provide/vod,茅台资源|https://caiji.maotaizy.cc/api.php/provide/vod,猫眼资源|https://api.maoyanapi.top/api.php/provide/vod,百度资源|https://api.apibdzy.com/api.php/provide/vod,红牛资源|https://www.hongniuzy2.com/api.php/provide/vod
+猫眼资源|https://api.maoyanapi.top/api.php/provide/vod,百度资源|https://api.apibdzy.com/api.php/provide/vod,红牛资源|https://www.hongniuzy2.com/api.php/provide/vod,U酷资源|https://api.ukuapi88.com/api.php/provide/vod
 ```
 
 ### 只配置3个源（更简洁）
 
 ```
-无尽资源|https://api.wujinapi.me/api.php/provide/vod,茅台资源|https://caiji.maotaizy.cc/api.php/provide/vod,猫眼资源|https://api.maoyanapi.top/api.php/provide/vod
+猫眼资源|https://api.maoyanapi.top/api.php/provide/vod,百度资源|https://api.apibdzy.com/api.php/provide/vod,红牛资源|https://www.hongniuzy2.com/api.php/provide/vod,U酷资源|https://api.ukuapi88.com/api.php/provide/vod
 ```
 
 ---
@@ -124,7 +124,7 @@
 
 **变量名称：**
 ```
-VITE_ACCESS_PASSWORD
+ACCESS_PASSWORD
 ```
 
 **变量值：**

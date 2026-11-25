@@ -91,21 +91,21 @@ export const useApiStore = create<ApiStore>()(
         },
 
         initializeEnvSources: async () => {
-          console.log('🚀 [视频源初始化] 开始初始化环境变量视频源...')
           const envSources = await getInitialVideoSources()
-          console.log('📦 [视频源初始化] 获取到的环境变量视频源:', envSources)
+          if (envSources.length === 0) return
+
           set(state => {
-            // 清空现有源，只使用环境变量源
-            console.log('🗑️ [视频源初始化] 清空现有视频源，只使用环境变量源')
-            state.videoAPIs = []
-            
-            if (envSources.length > 0) {
-              console.log('✅ [视频源初始化] 设置环境变量视频源...')
-              state.videoAPIs = envSources.filter(source => source !== null)
-              console.log('✅ [视频源初始化] 完成！当前视频源列表:', state.videoAPIs)
-            } else {
-              console.log('⚠️ [视频源初始化] 没有从环境变量获取到视频源')
-            }
+            // 环境变量源始终以 .env 为准（增删都会同步），用户自己添加的源保留
+            const envIds = new Set(envSources.map(source => source.id))
+            const envUrls = new Set(envSources.map(source => source.url))
+            const userSources = state.videoAPIs.filter(
+              api =>
+                !envIds.has(api.id) &&
+                !api.id?.startsWith('env_source_') &&
+                !envUrls.has(api.url),
+            )
+
+            state.videoAPIs = [...envSources, ...userSources]
           })
         },
 
@@ -147,18 +147,18 @@ export const useApiStore = create<ApiStore>()(
       })),
       {
         name: 'ouonnki-tv-api-store',
-        version: 6, // 升级版本号，触发迁移
-        // 只持久化 adFilteringEnabled，不持久化 videoAPIs
-        partialize: (state) => ({ 
-          adFilteringEnabled: state.adFilteringEnabled 
+        version: 7,
+        partialize: (state) => ({
+          adFilteringEnabled: state.adFilteringEnabled,
+          videoAPIs: state.videoAPIs,
         }),
         migrate: (persistedState: unknown) => {
-          const state = persistedState as Partial<ApiState>
-          
-          // 清空所有旧的 videoAPIs 数据
-          state.videoAPIs = []
+          const state = persistedState as Partial<ApiState> | undefined
 
-          return state
+          return {
+            adFilteringEnabled: state?.adFilteringEnabled ?? true,
+            videoAPIs: Array.isArray(state?.videoAPIs) ? state.videoAPIs : [],
+          }
         },
       },
     ),

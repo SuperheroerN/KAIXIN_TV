@@ -14,26 +14,36 @@ export default function SideBar({
   className?: string
 }) {
   return (
-    <div className={cn(`relative flex h-full w-full flex-col gap-3`, className)}>
-      {modules.map(module => (
-        <div
-          key={module.id}
-          className={`relative z-10 flex h-12 cursor-pointer items-center gap-2 rounded-lg p-3 transition-colors duration-300 ${
-            activeId === module.id ? 'text-white' : 'text-gray-500 hover:text-gray-700'
-          } ${module.id === 'about_project' ? 'md:mt-auto' : ''}`}
-          onClick={() => onSelect(module.id)}
-        >
-          {activeId === module.id && (
-            <motion.div
-              layoutId="sidebar-active-bg"
-              className="absolute inset-0 -z-10 rounded-lg bg-zinc-600/80 shadow-xl/30 shadow-zinc-900 backdrop-blur-xl"
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            />
-          )}
-          <span className="relative z-10">{module.icon}</span>
-          <h2 className="relative z-10 font-medium">{module.name}</h2>
-        </div>
-      ))}
-    </div>
+    <nav className={cn('flex h-full w-full flex-col gap-1', className)}>
+      {modules.map(module => {
+        const active = activeId === module.id
+        return (
+          <button
+            key={module.id}
+            type="button"
+            onClick={() => onSelect(module.id)}
+            className={cn(
+              'relative flex h-11 items-center gap-2.5 rounded-lg px-3 text-sm transition',
+              active
+                ? 'font-medium text-brand'
+                : 'text-fg-soft hover:bg-surface-2 hover:text-fg',
+              module.id === 'about_project' ? 'md:mt-auto' : '',
+            )}
+          >
+            {active && (
+              <motion.span
+                layoutId="settings-active-bg"
+                className="absolute inset-0 -z-10 rounded-lg bg-brand-soft ring-1 ring-brand/25"
+                transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+              />
+            )}
+            <span className={cn('relative z-10', active ? 'text-brand' : 'text-muted-fg')}>
+              {module.icon}
+            </span>
+            <span className="relative z-10">{module.name}</span>
+          </button>
+        )
+      })}
+    </nav>
   )
 }

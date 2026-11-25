@@ -6,7 +6,7 @@ export const DEFAULT_SETTINGS = {
   network: {
     defaultTimeout:
       envSettings?.network?.defaultTimeout ??
-      (Number(import.meta.env.VITE_DEFAULT_TIMEOUT) || 3000),
+      (Number(import.meta.env.VITE_DEFAULT_TIMEOUT) || 8000),
     defaultRetry:
       envSettings?.network?.defaultRetry ?? (Number(import.meta.env.VITE_DEFAULT_RETRY) || 3),
   },

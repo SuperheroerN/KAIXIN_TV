@@ -74,4 +74,6 @@ export interface VideoApi {
   retry?: number
   isEnabled: boolean
   updatedAt: Date
+  // 搜索结果排序权重：越小越靠前，来自 VITE_SOURCE_ORDER
+  priority?: number
 }

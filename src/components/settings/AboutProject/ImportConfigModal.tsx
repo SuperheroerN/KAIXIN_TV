@@ -57,8 +57,8 @@ export function URLConfigModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="h-fit bg-white/20 backdrop-blur-md"
-        overlayClassName="bg-white/40 backdrop-blur-xs"
+        className="h-fit bg-surface-2 backdrop-blur-md"
+        overlayClassName="bg-surface-2 backdrop-blur-xs"
       >
         <DialogHeader>
           <DialogTitle>从 URL 导入个人配置</DialogTitle>
@@ -74,7 +74,7 @@ export function URLConfigModal({
                 placeholder="https://example.com/config.json"
                 className={errors.url ? 'border-red-500' : ''}
               />
-              {errors.url && <p className="text-sm text-red-500">{errors.url.message}</p>}
+              {errors.url && <p className="text-sm text-brand">{errors.url.message}</p>}
             </div>
           </div>
           <DialogFooter>
@@ -140,8 +140,8 @@ export function TextConfigModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="h-fit bg-white/20 backdrop-blur-md"
-        overlayClassName="bg-white/40 backdrop-blur-xs"
+        className="h-fit bg-surface-2 backdrop-blur-md"
+        overlayClassName="bg-surface-2 backdrop-blur-xs"
       >
         <DialogHeader>
           <DialogTitle>从文本导入个人配置</DialogTitle>
@@ -157,7 +157,7 @@ export function TextConfigModal({
                 placeholder='{"settings": {...}, "videoSources": [...]}'
                 className={`max-h-50 min-h-50 md:max-h-100 ${errors.content ? 'border-red-500' : ''}`}
               />
-              {errors.content && <p className="text-sm text-red-500">{errors.content.message}</p>}
+              {errors.content && <p className="text-sm text-brand">{errors.content.message}</p>}
             </div>
           </div>
           <DialogFooter>

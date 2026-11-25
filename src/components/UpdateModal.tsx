@@ -51,7 +51,7 @@ export default function UpdateModal() {
       classNames={{
         backdrop: 'bg-gradient-to-br from-gray-50/80 to-gray-100/80',
         wrapper: 'flex items-center justify-center p-4',
-        base: 'bg-white/80 backdrop-blur-xl backdrop-saturate-200 border border-white/50 shadow-xl max-w-full',
+        base: 'bg-surface backdrop-blur-xl backdrop-saturate-200 border border-white/50 shadow-xl max-w-full',
         header: 'px-4 sm:px-6',
         body: 'bg-transparent px-4 sm:px-6',
         footer: 'px-4 sm:px-6',
@@ -96,8 +96,8 @@ export default function UpdateModal() {
                   size="sm"
                   variant="flat"
                   classNames={{
-                    base: 'bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-300/50 flex-shrink-0',
-                    content: 'text-gray-700 font-semibold text-xs',
+                    base: 'bg-gradient-to-r from-gray-100 to-gray-200 border border-line/50 flex-shrink-0',
+                    content: 'text-fg-soft font-semibold text-xs',
                   }}
                 >
                   v{updateInfo.version}
@@ -107,7 +107,7 @@ export default function UpdateModal() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
-                className="text-xs font-medium text-gray-500 sm:text-sm"
+                className="text-xs font-medium text-muted-fg sm:text-sm"
               >
                 {updateInfo.date} 更新
               </motion.p>
@@ -143,7 +143,7 @@ export default function UpdateModal() {
                               className="flex items-start gap-2 text-xs sm:gap-3 sm:text-sm"
                             >
                               <span className="mt-0.5 h-1 w-1 flex-shrink-0 rounded-full bg-emerald-500 sm:mt-1 sm:h-1.5 sm:w-1.5" />
-                              <span className="leading-relaxed break-words text-gray-700">
+                              <span className="leading-relaxed break-words text-fg-soft">
                                 {feature}
                               </span>
                             </motion.li>
@@ -184,7 +184,7 @@ export default function UpdateModal() {
                               className="flex items-start gap-2 text-xs sm:gap-3 sm:text-sm"
                             >
                               <span className="mt-0.5 h-1 w-1 flex-shrink-0 rounded-full bg-amber-500 sm:mt-1 sm:h-1.5 sm:w-1.5" />
-                              <span className="leading-relaxed break-words text-gray-700">
+                              <span className="leading-relaxed break-words text-fg-soft">
                                 {fix}
                               </span>
                             </motion.li>
@@ -229,7 +229,7 @@ export default function UpdateModal() {
                               className="flex items-start gap-2 text-xs sm:gap-3 sm:text-sm"
                             >
                               <span className="mt-0.5 h-1 w-1 flex-shrink-0 rounded-full bg-rose-500 sm:mt-1 sm:h-1.5 sm:w-1.5" />
-                              <span className="leading-relaxed break-words text-gray-700">
+                              <span className="leading-relaxed break-words text-fg-soft">
                                 {breaking}
                               </span>
                             </motion.li>

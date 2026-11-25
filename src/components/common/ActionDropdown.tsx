@@ -36,7 +36,7 @@ export default function ActionDropdown({ label, items, align = 'end' }: ActionDr
             {item.label}
           </DropdownMenuSubTrigger>
           <DropdownMenuPortal>
-            <DropdownMenuSubContent className="bg-white/10 backdrop-blur-lg">
+            <DropdownMenuSubContent className="bg-surface backdrop-blur-lg">
               {item.children.map((child, childIndex) => renderItem(child, childIndex))}
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
@@ -58,11 +58,11 @@ export default function ActionDropdown({ label, items, align = 'end' }: ActionDr
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="bg-white/40 backdrop-blur-xl hover:bg-gray-100/50">
+        <Button variant="outline" className="bg-surface-2 backdrop-blur-xl hover:bg-surface-2/50">
           {label} <ChevronDown className="ml-2 h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-40 bg-white/10 backdrop-blur-lg" align={align}>
+      <DropdownMenuContent className="w-40 bg-surface backdrop-blur-lg" align={align}>
         <DropdownMenuGroup>{items.map((item, index) => renderItem(item, index))}</DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>

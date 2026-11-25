@@ -109,7 +109,7 @@ export default function BatchTestButton({ sources }: { sources: VideoApi[] }) {
           responseTime,
           resultCount,
         }
-      } catch (e) {
+      } catch {
         return {
           source,
           status: 'error',
@@ -195,7 +195,7 @@ export default function BatchTestButton({ sources }: { sources: VideoApi[] }) {
       case 'error':
         return <XCircle className="h-4 w-4 text-red-600" />
       default:
-        return <div className="h-4 w-4 rounded-full border-2 border-gray-300" />
+        return <div className="h-4 w-4 rounded-full border-2 border-line" />
     }
   }
 
@@ -210,7 +210,7 @@ export default function BatchTestButton({ sources }: { sources: VideoApi[] }) {
       case 'testing':
         return 'text-blue-500'
       default:
-        return 'text-gray-500'
+        return 'text-muted-fg'
     }
   }
 
@@ -228,7 +228,7 @@ export default function BatchTestButton({ sources }: { sources: VideoApi[] }) {
 
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">共 {sources.length} 个视频源</p>
+            <p className="text-sm text-fg-soft">共 {sources.length} 个视频源</p>
             <Button onClick={testAllSources} disabled={isTesting}>
               {isTesting ? (
                 <>
@@ -244,7 +244,7 @@ export default function BatchTestButton({ sources }: { sources: VideoApi[] }) {
           <ScrollArea className="h-96 rounded-md border p-4">
             <div className="flex flex-col gap-3">
               {results.length === 0 ? (
-                <p className="text-center text-sm text-gray-500">点击"开始测试"进行批量测试</p>
+                <p className="text-center text-sm text-muted-fg">点击"开始测试"进行批量测试</p>
               ) : (
                 results.map(result => (
                   <div
@@ -258,12 +258,12 @@ export default function BatchTestButton({ sources }: { sources: VideoApi[] }) {
                         <p className={`text-sm ${getStatusColor(result.status)}`}>
                           {result.message}
                           {result.responseTime && (
-                            <span className="ml-2 text-xs text-gray-500">
+                            <span className="ml-2 text-xs text-muted-fg">
                               {result.responseTime}ms
                             </span>
                           )}
                         </p>
-                        <p className="text-xs text-gray-400">{result.source.url}</p>
+                        <p className="text-xs text-muted-fg">{result.source.url}</p>
                       </div>
                     </div>
                   </div>

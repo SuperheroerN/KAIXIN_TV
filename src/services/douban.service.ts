@@ -9,13 +9,28 @@ const DOUBAN_BASE_URL = 'https://movie.douban.com'
 // 代理URL（用于解决CORS问题）
 const PROXY_URL = '/proxy?url='
 
-// 备用代理
-const FALLBACK_PROXY = 'https://api.allorigins.win/get?url='
+// 单次请求超时时间
+const REQUEST_TIMEOUT = 6000
+
+// 缓存有效期：30 分钟内直接命中，超过后作为兜底数据最多保留 24 小时
+const CACHE_TTL = 30 * 60 * 1000
+const CACHE_MAX_AGE = 24 * 60 * 60 * 1000
+
+// 连续失败后的冷却时间，避免每次切换分类都白等一次超时
+const FAILURE_COOLDOWN = 2 * 60 * 1000
+
+const STORAGE_PREFIX = 'kaixin:douban:'
 
 /**
  * 豆瓣内容类型
  */
 export type DoubanType = 'movie' | 'tv'
+
+/**
+ * 豆瓣排序方式
+ * recommend: 综合推荐  time: 最新  rank: 评分
+ */
+export type DoubanSort = 'recommend' | 'time' | 'rank'
 
 /**
  * 豆瓣推荐项
@@ -39,66 +54,167 @@ export interface DoubanTag {
   count?: number
 }
 
+export interface DoubanRecommendResult {
+  items: DoubanItem[]
+  // 数据来自过期缓存（豆瓣当前不可用）
+  stale: boolean
+}
+
+interface CacheEntry {
+  items: DoubanItem[]
+  ts: number
+}
+
+const memoryCache = new Map<string, CacheEntry>()
+
+// 豆瓣不可用时的冷却截止时间
+let cooldownUntil = 0
+
+/**
+ * 是否禁用豆瓣数据源（服务器访问不了豆瓣时可在环境变量里关掉）
+ */
+export function isDoubanDisabled(): boolean {
+  return import.meta.env.VITE_DISABLE_DOUBAN === 'true'
+}
+
+function buildCacheKey(
+  type: DoubanType,
+  tag: string,
+  sort: DoubanSort,
+  pageLimit: number,
+  pageStart: number,
+): string {
+  return `${type}|${tag}|${sort}|${pageLimit}|${pageStart}`
+}
+
+function readCache(key: string): { entry: CacheEntry; fresh: boolean } | null {
+  let entry = memoryCache.get(key)
+
+  if (!entry) {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_PREFIX + key)
+      if (raw) entry = JSON.parse(raw) as CacheEntry
+    } catch {
+      entry = undefined
+    }
+    if (entry?.items?.length) memoryCache.set(key, entry)
+  }
+
+  if (!entry?.items?.length) return null
+
+  const age = Date.now() - entry.ts
+  if (age > CACHE_MAX_AGE) return null
+
+  return { entry, fresh: age <= CACHE_TTL }
+}
+
+function writeCache(key: string, items: DoubanItem[]): void {
+  const entry: CacheEntry = { items, ts: Date.now() }
+  memoryCache.set(key, entry)
+  try {
+    sessionStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(entry))
+  } catch {
+    // sessionStorage 写满或被禁用时忽略，内存缓存仍然有效
+  }
+}
+
 /**
  * 通用请求处理函数
  */
-async function fetchDoubanData<T>(url: string, timeout = 10000): Promise<T | null> {
-  console.log('🎬 [豆瓣API] 请求URL:', url)
-
+async function requestDouban<T>(url: string): Promise<T | null> {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeout)
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
 
   try {
-    // 尝试主代理
-    const proxyUrl = `${PROXY_URL}${encodeURIComponent(url)}`
-    console.log('   使用代理:', proxyUrl)
-
-    const response = await fetch(proxyUrl, {
+    const response = await fetch(`${PROXY_URL}${encodeURIComponent(url)}`, {
       signal: controller.signal,
       headers: {
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
     })
-
-    clearTimeout(timeoutId)
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
     }
 
-    const data = await response.json()
-    console.log('✅ [豆瓣API] 请求成功')
-    return data as T
+    return (await response.json()) as T
   } catch (error) {
-    clearTimeout(timeoutId)
-    console.error('❌ [豆瓣API] 请求失败:', error)
-
-    // 尝试备用代理
-    try {
-      console.log('   尝试备用代理...')
-      const fallbackUrl = `${FALLBACK_PROXY}${encodeURIComponent(url)}`
-      const response = await fetch(fallbackUrl)
-      const data = await response.json()
-
-      if (data.contents) {
-        const parsed = JSON.parse(data.contents)
-        console.log('✅ [豆瓣API] 备用代理成功')
-        return parsed as T
-      }
-    } catch (fallbackError) {
-      console.error('❌ [豆瓣API] 备用代理也失败:', fallbackError)
-    }
-
+    console.warn('❌ [豆瓣API] 请求失败:', url, error)
+    cooldownUntil = Date.now() + FAILURE_COOLDOWN
     return null
+  } finally {
+    clearTimeout(timeoutId)
   }
+}
+
+function buildSearchUrl(
+  type: DoubanType,
+  tag: string,
+  sort: DoubanSort,
+  pageLimit: number,
+  pageStart: number,
+): string {
+  return `${DOUBAN_BASE_URL}/j/search_subjects?type=${type}&tag=${encodeURIComponent(
+    tag,
+  )}&sort=${sort}&page_limit=${pageLimit}&page_start=${pageStart}`
+}
+
+async function requestSubjects(
+  type: DoubanType,
+  tag: string,
+  sort: DoubanSort,
+  pageLimit: number,
+  pageStart: number,
+): Promise<DoubanItem[] | null> {
+  const data = await requestDouban<{ subjects?: DoubanItem[] }>(
+    buildSearchUrl(type, tag, sort, pageLimit, pageStart),
+  )
+  return data ? (data.subjects ?? []) : null
 }
 
 /**
  * 获取豆瓣推荐内容
- * @param type 内容类型 movie 或 tv
- * @param tag 标签（如"热门"、"最新"等）
- * @param pageLimit 每页数量
- * @param pageStart 起始位置
+ * 优先走缓存；豆瓣不可用时返回过期缓存，避免页面直接变成"暂无内容"
+ */
+export async function getDoubanRecommend(
+  type: DoubanType,
+  tag: string,
+  sort: DoubanSort = 'recommend',
+  pageLimit: number = 20,
+  pageStart: number = 0,
+): Promise<DoubanRecommendResult> {
+  const key = buildCacheKey(type, tag, sort, pageLimit, pageStart)
+  const cached = readCache(key)
+
+  if (isDoubanDisabled()) {
+    return { items: [], stale: false }
+  }
+
+  if (cached?.fresh) {
+    return { items: cached.entry.items, stale: false }
+  }
+
+  if (Date.now() < cooldownUntil) {
+    return cached ? { items: cached.entry.items, stale: true } : { items: [], stale: false }
+  }
+
+  let items = await requestSubjects(type, tag, sort, pageLimit, pageStart)
+
+  // 豆瓣部分标签在 recommend 排序下几乎没有数据，换用 time 再取一次
+  if (items && items.length === 0 && sort !== 'time') {
+    items = await requestSubjects(type, tag, 'time', pageLimit, pageStart)
+  }
+
+  if (items && items.length > 0) {
+    writeCache(key, items)
+    return { items, stale: false }
+  }
+
+  return cached ? { items: cached.entry.items, stale: true } : { items: [], stale: false }
+}
+
+/**
+ * 获取豆瓣推荐内容（只要结果数组）
  */
 export async function fetchDoubanRecommend(
   type: DoubanType,
@@ -106,18 +222,8 @@ export async function fetchDoubanRecommend(
   pageLimit: number = 20,
   pageStart: number = 0,
 ): Promise<DoubanItem[]> {
-  const url = `${DOUBAN_BASE_URL}/j/search_subjects?type=${type}&tag=${encodeURIComponent(
-    tag,
-  )}&sort=recommend&page_limit=${pageLimit}&page_start=${pageStart}`
-
-  const data = await fetchDoubanData<{ subjects: DoubanItem[] }>(url)
-
-  if (data && data.subjects) {
-    console.log(`📦 [豆瓣API] 获取到 ${data.subjects.length} 个${type === 'movie' ? '电影' : '电视剧'}`)
-    return data.subjects
-  }
-
-  return []
+  const result = await getDoubanRecommend(type, tag, 'recommend', pageLimit, pageStart)
+  return result.items
 }
 
 /**
@@ -125,16 +231,29 @@ export async function fetchDoubanRecommend(
  * @param type 内容类型 movie 或 tv
  */
 export async function fetchDoubanTags(type: DoubanType): Promise<DoubanTag[]> {
-  const url = `${DOUBAN_BASE_URL}/j/search_tags?type=${type}`
+  const data = await requestDouban<{ tags?: string[] }>(
+    `${DOUBAN_BASE_URL}/j/search_tags?type=${type}`,
+  )
 
-  const data = await fetchDoubanData<{ tags: string[] }>(url)
-
-  if (data && data.tags) {
-    console.log(`🏷️ [豆瓣API] 获取到 ${data.tags.length} 个标签`)
+  if (data?.tags) {
     return data.tags.map(tag => ({ name: tag }))
   }
 
   return []
+}
+
+/**
+ * 分类使用的豆瓣排序方式
+ * 未列出的分类统一用 recommend
+ */
+const CATEGORY_SORTS: Record<string, DoubanSort> = {
+  latest: 'time',
+  classic: 'rank',
+  'high-score': 'rank',
+}
+
+export function getCategorySort(key: string): DoubanSort {
+  return CATEGORY_SORTS[key] ?? 'recommend'
 }
 
 /**
@@ -148,7 +267,7 @@ export const DOUBAN_CATEGORIES = [
   { key: 'classic', label: '经典', type: 'movie' as DoubanType, tag: '经典' },
   { key: 'high-score', label: '豆瓣高分', type: 'movie' as DoubanType, tag: '豆瓣高分' },
   { key: 'hidden-gem', label: '冷门佳片', type: 'movie' as DoubanType, tag: '冷门佳片' },
-  
+
   // 电影类型
   { key: 'movie', label: '电影', type: 'movie' as DoubanType, tag: '热门' },
   { key: 'action', label: '动作', type: 'movie' as DoubanType, tag: '动作' },
@@ -158,13 +277,13 @@ export const DOUBAN_CATEGORIES = [
   { key: 'suspense', label: '悬疑', type: 'movie' as DoubanType, tag: '悬疑' },
   { key: 'horror', label: '恐怖', type: 'movie' as DoubanType, tag: '恐怖' },
   { key: 'art', label: '文艺', type: 'movie' as DoubanType, tag: '文艺' },
-  
+
   // 地区分类
   { key: 'chinese', label: '华语', type: 'movie' as DoubanType, tag: '华语' },
   { key: 'western', label: '欧美', type: 'movie' as DoubanType, tag: '欧美' },
   { key: 'korean', label: '韩国', type: 'movie' as DoubanType, tag: '韩国' },
   { key: 'japanese', label: '日本', type: 'movie' as DoubanType, tag: '日本' },
-  
+
   // 电视剧
   { key: 'tv', label: '电视剧', type: 'tv' as DoubanType, tag: '热门' },
   { key: 'us-drama', label: '美剧', type: 'tv' as DoubanType, tag: '美剧' },
@@ -173,7 +292,7 @@ export const DOUBAN_CATEGORIES = [
   { key: 'jp-drama', label: '日剧', type: 'tv' as DoubanType, tag: '日剧' },
   { key: 'cn-drama', label: '国产剧', type: 'tv' as DoubanType, tag: '国产剧' },
   { key: 'hk-drama', label: '港剧', type: 'tv' as DoubanType, tag: '港剧' },
-  
+
   // 其他类型
   { key: 'anime', label: '日本动画', type: 'tv' as DoubanType, tag: '日本动画' },
   { key: 'variety', label: '综艺', type: 'tv' as DoubanType, tag: '综艺' },

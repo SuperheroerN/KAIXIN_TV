@@ -45,3 +45,6 @@ test-*.cjs
 *.bak
 COMMIT_MESSAGE.txt
 PRIVACY_CLEANUP_SUMMARY.md
+
+# Local Workers cache
+.wrangler

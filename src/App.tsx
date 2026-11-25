@@ -1,15 +1,23 @@
-import { OkiLogo, SearchIcon, SettingIcon } from '@/components/icons'
-import { Button, Input, Card, CardFooter, Chip, Tabs, Tab, Skeleton, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@heroui/react'
-import React, { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import { useSearch } from '@/hooks'
-import RecentHistory from '@/components/RecentHistory'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { useTimeBasedTheme } from '@/hooks/useTimeBasedTheme'
-import { fetchDoubanRecommend, DOUBAN_CATEGORIES, type DoubanItem } from '@/services/douban.service'
+import { useApiStore } from '@/store/apiStore'
+import { useViewingHistoryStore } from '@/store/viewingHistoryStore'
+import { loadHomeFeed, type FeedItem, type HomeFeed } from '@/services/feed.service'
+import { useSearch } from '@/hooks'
+import {
+  CategoryPills,
+  EmptyState,
+  PosterCard,
+  PosterGrid,
+  PosterGridSkeleton,
+  RankList,
+  SectionHeader,
+  TopBar,
+} from '@/components/ui-kit'
+import { NoItemIcon } from '@/components/icons'
 import { getProxiedImageUrl, handleImageError } from '@/utils/imageProxy'
 
-// 主要分类（显示在标签栏）
+// 主要分类（显示在胶囊导航）
 const MAIN_CATEGORIES = [
   { key: 'hot', label: '热门' },
   { key: 'latest', label: '最新' },
@@ -19,283 +27,296 @@ const MAIN_CATEGORIES = [
   { key: 'tv', label: '电视剧' },
 ]
 
-// 分类配置 - 使用豆瓣API
-const CATEGORIES = DOUBAN_CATEGORIES
+// 更多分类，按组展示
+const MORE_CATEGORY_GROUPS = [
+  {
+    label: '电影类型',
+    items: [
+      { key: 'action', label: '动作' },
+      { key: 'comedy', label: '喜剧' },
+      { key: 'romance', label: '爱情' },
+      { key: 'scifi', label: '科幻' },
+      { key: 'suspense', label: '悬疑' },
+      { key: 'horror', label: '恐怖' },
+      { key: 'art', label: '文艺' },
+    ],
+  },
+  {
+    label: '地区',
+    items: [
+      { key: 'chinese', label: '华语' },
+      { key: 'western', label: '欧美' },
+      { key: 'korean', label: '韩国' },
+      { key: 'japanese', label: '日本' },
+    ],
+  },
+  {
+    label: '剧集',
+    items: [
+      { key: 'us-drama', label: '美剧' },
+      { key: 'uk-drama', label: '英剧' },
+      { key: 'kr-drama', label: '韩剧' },
+      { key: 'jp-drama', label: '日剧' },
+      { key: 'cn-drama', label: '国产剧' },
+      { key: 'hk-drama', label: '港剧' },
+    ],
+  },
+  {
+    label: '其他',
+    items: [
+      { key: 'anime', label: '日本动画' },
+      { key: 'variety', label: '综艺' },
+      { key: 'documentary', label: '纪录片' },
+      { key: 'hidden-gem', label: '冷门佳片' },
+    ],
+  },
+]
 
-function App() {
+export default function App() {
   const navigate = useNavigate()
-  const { search, setSearch, searchMovie } = useSearch()
-  const { isNightMode, toggleTheme } = useTimeBasedTheme()
-  
-  // 选中的分类（默认热门）
-  const [selectedCategory, setSelectedCategory] = useState<string>('hot')
-  // 豆瓣推荐数据
-  const [doubanItems, setDoubanItems] = useState<DoubanItem[]>([])
-  const [loading, setLoading] = useState(false)
+  const { searchMovie } = useSearch()
+  const videoAPIs = useApiStore(state => state.videoAPIs)
+  const viewingHistory = useViewingHistoryStore(state => state.viewingHistory)
 
-  // 加载豆瓣推荐内容
-  useEffect(() => {
-    const loadDoubanRecommend = async () => {
-      const category = CATEGORIES.find(c => c.key === selectedCategory)
-      if (!category) return
+  const [selectedCategory, setSelectedCategory] = useState('hot')
+  const [feed, setFeed] = useState<HomeFeed>({ items: [], source: 'none' })
+  const [loading, setLoading] = useState(true)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const requestSeq = useRef(0)
 
-      console.log('🎬 [首页加载] 加载豆瓣分类:', category.label)
+  const loadFeed = useCallback(async () => {
+    const seq = ++requestSeq.current
+    setLoading(true)
 
-      setLoading(true)
-      setDoubanItems([])
-      
-      try {
-        const items = await fetchDoubanRecommend(category.type, category.tag, 20, 0)
-        setDoubanItems(items)
-      } catch (error) {
-        console.error('❌ [首页加载] 加载失败:', error)
-        setDoubanItems([])
-      } finally {
-        setLoading(false)
-      }
+    try {
+      const result = await loadHomeFeed(selectedCategory, videoAPIs)
+      if (seq !== requestSeq.current) return
+      setFeed(result)
+    } catch (error) {
+      console.error('❌ [首页加载] 加载失败:', error)
+      if (seq !== requestSeq.current) return
+      setFeed({ items: [], source: 'none' })
+    } finally {
+      if (seq === requestSeq.current) setLoading(false)
     }
+  }, [selectedCategory, videoAPIs])
 
-    loadDoubanRecommend()
+  useEffect(() => {
+    loadFeed()
+  }, [loadFeed])
+
+  const categoryLabel = useMemo(() => {
+    const all = [...MAIN_CATEGORIES, ...MORE_CATEGORY_GROUPS.flatMap(group => group.items)]
+    return all.find(item => item.key === selectedCategory)?.label ?? '推荐'
   }, [selectedCategory])
 
-  const handleSearch = () => {
-    searchMovie(search)
-  }
-
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter') {
-      handleSearch()
+  const handleFeedClick = (item: FeedItem) => {
+    if (item.href) {
+      navigate(item.href)
+      return
     }
-  }
-
-  // 点击豆瓣推荐卡片 - 触发搜索
-  const handleDoubanClick = (item: DoubanItem) => {
-    console.log('🔍 点击豆瓣推荐，触发搜索:', item.title)
     searchMovie(item.title)
   }
 
+  // 最近观看去重后取前 8 条
+  const recentItems = useMemo(() => {
+    const seen = new Set<string>()
+    return viewingHistory
+      .filter(item => {
+        const key = `${item.sourceCode}-${item.vodId}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+      .slice(0, 8)
+  }, [viewingHistory])
+
   return (
-    <div className="min-h-screen w-full">
-      {/* 顶部导航栏 */}
-      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-200/50">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            {/* Logo */}
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-              <OkiLogo size={32} />
-              <span className="font-bold text-lg">KAIXIN TV</span>
-            </div>
+    <div className="min-h-dvh bg-app">
+      <TopBar />
 
-            {/* 搜索框 */}
-            <div className="flex-1 max-w-xl">
-              <Input
-                classNames={{
-                  base: 'max-w-full',
-                  input: 'text-sm',
-                  inputWrapper: 'h-10 bg-gray-100/80',
-                }}
-                placeholder="搜索影视..."
-                size="sm"
-                variant="flat"
-                startContent={<SearchIcon size={16} />}
-                value={search}
-                onValueChange={setSearch}
-                onKeyDown={handleKeyDown}
-                endContent={
-                  search && (
-                    <Button
-                      size="sm"
-                      radius="full"
-                      className="bg-gradient-to-br from-gray-500 to-gray-950 text-white"
-                      onPress={handleSearch}
-                    >
-                      搜索
-                    </Button>
-                  )
-                }
-              />
-            </div>
-
-            {/* 右侧按钮 */}
-            <div className="flex items-center gap-2">
-              <Button 
-                isIconOnly 
-                size="sm"
-                variant="light"
-                onPress={toggleTheme}
-                title={isNightMode ? '切换到白天模式' : '切换到晚上模式'}
-              >
-                {isNightMode ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="5" />
-                    <line x1="12" y1="1" x2="12" y2="3" />
-                    <line x1="12" y1="21" x2="12" y2="23" />
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                    <line x1="1" y1="12" x2="3" y2="12" />
-                    <line x1="21" y1="12" x2="23" y2="12" />
-                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                  </svg>
-                ) : (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                  </svg>
-                )}
-              </Button>
-              <Button isIconOnly size="sm" variant="light">
-                <RecentHistory />
-              </Button>
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                onPress={() => navigate('/settings')}
-              >
-                <SettingIcon size={20} />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 分类导航 */}
-      <div className="border-b border-gray-200/50 bg-white/80 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center gap-2">
-            {/* 主要分类标签 */}
-            <div className="flex-1 overflow-x-auto scrollbar-hide">
-              <Tabs
-                selectedKey={selectedCategory}
-                onSelectionChange={(key) => setSelectedCategory(key as string)}
-                variant="underlined"
-                classNames={{
-                  tabList: 'gap-4 flex-nowrap',
-                  cursor: 'bg-gray-900 dark:bg-white',
-                  tab: 'h-12 px-4 whitespace-nowrap',
-                }}
-              >
-                {MAIN_CATEGORIES.map(category => (
-                  <Tab key={category.key} title={category.label} />
-                ))}
-              </Tabs>
-            </div>
-            
-            {/* 更多分类下拉菜单 */}
-            <Dropdown>
-              <DropdownTrigger>
-                <Button 
-                  variant="light" 
-                  size="sm"
-                  className="h-12 px-4 whitespace-nowrap"
+      <main className="mx-auto max-w-[1440px] px-4 pb-20 md:px-6">
+        {recentItems.length > 0 ? (
+          <section className="pt-6">
+            <SectionHeader title="继续观看" description="接着上次的进度" />
+            <div className="scrollbar-hide -mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
+              {recentItems.map(item => (
+                <button
+                  key={`${item.sourceCode}-${item.vodId}`}
+                  type="button"
+                  onClick={() => navigate(`/video/${item.sourceCode}/${item.vodId}/${item.episodeIndex}`)}
+                  className="group flex w-72 shrink-0 items-center gap-3 rounded-xl border border-line bg-surface p-2 text-left transition hover:border-line-strong"
                 >
-                  更多分类 ▼
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu 
-                aria-label="更多分类"
-                onAction={(key) => setSelectedCategory(key as string)}
-                className="max-h-[500px] overflow-y-auto"
-              >
-                <DropdownItem key="genre-header" isReadOnly className="opacity-50 font-semibold">
-                  电影类型
-                </DropdownItem>
-                <DropdownItem key="action">动作</DropdownItem>
-                <DropdownItem key="comedy">喜剧</DropdownItem>
-                <DropdownItem key="romance">爱情</DropdownItem>
-                <DropdownItem key="scifi">科幻</DropdownItem>
-                <DropdownItem key="suspense">悬疑</DropdownItem>
-                <DropdownItem key="horror">恐怖</DropdownItem>
-                <DropdownItem key="art">文艺</DropdownItem>
-                
-                <DropdownItem key="region-header" isReadOnly className="opacity-50 font-semibold mt-2">
-                  地区
-                </DropdownItem>
-                <DropdownItem key="chinese">华语</DropdownItem>
-                <DropdownItem key="western">欧美</DropdownItem>
-                <DropdownItem key="korean">韩国</DropdownItem>
-                <DropdownItem key="japanese">日本</DropdownItem>
-                
-                <DropdownItem key="tv-header" isReadOnly className="opacity-50 font-semibold mt-2">
-                  电视剧
-                </DropdownItem>
-                <DropdownItem key="us-drama">美剧</DropdownItem>
-                <DropdownItem key="uk-drama">英剧</DropdownItem>
-                <DropdownItem key="kr-drama">韩剧</DropdownItem>
-                <DropdownItem key="jp-drama">日剧</DropdownItem>
-                <DropdownItem key="cn-drama">国产剧</DropdownItem>
-                <DropdownItem key="hk-drama">港剧</DropdownItem>
-                
-                <DropdownItem key="other-header" isReadOnly className="opacity-50 font-semibold mt-2">
-                  其他
-                </DropdownItem>
-                <DropdownItem key="anime">日本动画</DropdownItem>
-                <DropdownItem key="variety">综艺</DropdownItem>
-                <DropdownItem key="documentary">纪录片</DropdownItem>
-                <DropdownItem key="hidden-gem">冷门佳片</DropdownItem>
-              </DropdownMenu>
-            </Dropdown>
-          </div>
-        </div>
-      </div>
-
-      {/* 推荐视频内容 */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <Card key={i} className="h-64">
-                <Skeleton className="h-full w-full rounded-lg" />
-              </Card>
-            ))}
-          </div>
-        ) : doubanItems.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {doubanItems.map((item, index) => (
-              <motion.div
-                key={`${item.id}_${index}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <Card
-                  isPressable
-                  isFooterBlurred
-                  onPress={() => handleDoubanClick(item)}
-                  className="h-64 hover:scale-105 transition-transform"
-                >
-                  <div className="relative w-full h-full">
+                  <span className="relative h-20 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-2">
                     <img
                       alt={item.title}
-                      className="w-full h-full object-cover"
-                      src={getProxiedImageUrl(item.cover)}
-                      data-original-url={item.cover}
-                      onError={(e) => handleImageError(e, item.title)}
                       loading="lazy"
+                      className="h-full w-full object-cover"
+                      src={getProxiedImageUrl(item.imageUrl)}
+                      data-original-url={item.imageUrl}
+                      onError={e => handleImageError(e, item.title)}
                     />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-fg">{item.title}</span>
+                    <span className="mt-1 block truncate text-xs text-muted-fg">
+                      {item.episodeName || `第${item.episodeIndex + 1}集`} · {item.sourceName}
+                    </span>
+                    <span className="mt-2 block h-1 w-full overflow-hidden rounded-full bg-surface-3">
+                      <span
+                        className="block h-full rounded-full bg-brand"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            Math.max(2, (item.playbackPosition / (item.duration || 1)) * 100),
+                          )}%`,
+                        }}
+                      />
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <section className="pt-6">
+          <div className="flex items-center gap-2">
+            <CategoryPills
+              options={MAIN_CATEGORIES}
+              value={selectedCategory}
+              onChange={key => setSelectedCategory(key)}
+              className="flex-1"
+            />
+
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setMoreOpen(open => !open)}
+                className="flex items-center gap-1 rounded-full border border-line bg-surface-2 px-3.5 py-1.5 text-[13px] font-medium text-fg-soft transition hover:text-fg"
+              >
+                更多分类
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+
+              {moreOpen ? (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
+                  <div className="absolute top-11 right-0 z-50 w-72 rounded-xl border border-line bg-surface p-3 shadow-[var(--shadow-card)]">
+                    {MORE_CATEGORY_GROUPS.map(group => (
+                      <div key={group.label} className="mb-2 last:mb-0">
+                        <p className="px-1 pb-1 text-[11px] font-medium tracking-wide text-muted-fg">
+                          {group.label}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {group.items.map(item => (
+                            <button
+                              key={item.key}
+                              type="button"
+                              onClick={() => {
+                                setSelectedCategory(item.key)
+                                setMoreOpen(false)
+                              }}
+                              className={`rounded-md px-2 py-1 text-xs transition ${
+                                selectedCategory === item.key
+                                  ? 'bg-brand text-white'
+                                  : 'bg-surface-2 text-fg-soft hover:text-fg'
+                              }`}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <CardFooter className="absolute bottom-0 z-10 border-t border-white/20 bg-black/40 backdrop-blur">
-                    <div className="flex flex-col gap-1 w-full">
-                      <p className="text-sm font-semibold text-white line-clamp-2">{item.title}</p>
-                      {item.rate && (
-                        <Chip size="sm" color="warning" variant="flat" className="text-xs">
-                          ⭐ {item.rate}
-                        </Chip>
-                      )}
-                    </div>
-                  </CardFooter>
-                </Card>
-              </motion.div>
-            ))}
+                </>
+              ) : null}
+            </div>
           </div>
-        ) : (
-          <div className="text-center py-20">
-            <p className="text-gray-500">暂无内容</p>
-          </div>
-        )}
-      </div>
+        </section>
+
+        <div className="mt-6 grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <section>
+            <SectionHeader
+              title={categoryLabel}
+              description={feed.source === 'douban' ? '豆瓣推荐' : undefined}
+              action={
+                <button
+                  type="button"
+                  onClick={loadFeed}
+                  className="flex items-center gap-1 rounded-full border border-line px-3 py-1.5 text-xs text-fg-soft transition hover:border-line-strong hover:text-fg"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 12a9 9 0 1 1-3-6.7M21 3v6h-6" />
+                  </svg>
+                  换一批
+                </button>
+              }
+            />
+
+            {feed.note && !loading ? (
+              <p className="mb-3 rounded-lg border border-line bg-surface-2 px-3 py-2 text-xs text-muted-fg">
+                {feed.note}
+              </p>
+            ) : null}
+
+            {loading ? (
+              <PosterGridSkeleton count={18} />
+            ) : feed.items.length > 0 ? (
+              <PosterGrid>
+                {feed.items.map((item, index) => (
+                  <PosterCard
+                    key={item.key}
+                    title={item.title}
+                    cover={item.cover}
+                    badge={item.remarks}
+                    rating={item.rate}
+                    onPress={() => handleFeedClick(item)}
+                    style={{ animationDelay: `${Math.min(index, 12) * 25}ms` }}
+                    className="animate-in fade-in duration-500"
+                  />
+                ))}
+              </PosterGrid>
+            ) : (
+              <EmptyState
+                icon={<NoItemIcon size={96} />}
+                title="暂无内容"
+                description="换个分类试试，或者确认视频源是否可用。"
+                action={
+                  <button
+                    type="button"
+                    onClick={loadFeed}
+                    className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+                  >
+                    重新加载
+                  </button>
+                }
+              />
+            )}
+          </section>
+
+          <aside className="hidden xl:block">
+            <div className="sticky top-20 rounded-2xl border border-line bg-surface p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-fg">本周热榜</h3>
+                <span className="text-[11px] text-muted-fg">{categoryLabel}</span>
+              </div>
+              <RankList
+                items={feed.items.slice(0, 10).map(item => ({
+                  key: item.key,
+                  title: item.title,
+                  subtitle: item.rate ?? item.remarks,
+                  cover: item.cover,
+                  onPress: () => handleFeedClick(item),
+                }))}
+              />
+            </div>
+          </aside>
+        </div>
+      </main>
     </div>
   )
 }
-
-export default App

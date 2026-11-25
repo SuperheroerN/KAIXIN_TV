@@ -1,5 +1,7 @@
 import { API_CONFIG, PROXY_URL, M3U8_PATTERN } from '@/config/api.config'
+import { parsePlaySources } from './episodeParser'
 import type { SearchResponse, DetailResponse, VideoItem, VideoApi } from '@/types'
+import { log } from '@/utils/logger'
 
 class ApiService {
   private async fetchWithTimeout(
@@ -7,28 +9,41 @@ class ApiService {
     options: RequestInit = {},
     timeout = 10000,
     retry = 3,
+    signal?: AbortSignal,
   ): Promise<Response> {
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError')
+    }
+
     const controller = new AbortController()
     const timeoutId = setTimeout(() => {
       controller.abort('request timeout')
     }, timeout)
+
+    // 外部取消（离开页面、换关键词）要真正中断请求，不能只丢掉结果
+    const onExternalAbort = () => controller.abort('aborted')
+    signal?.addEventListener('abort', onExternalAbort, { once: true })
 
     try {
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
       })
-      clearTimeout(timeoutId)
       return response
     } catch (error) {
-      clearTimeout(timeoutId)
+      if (signal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError')
+      }
 
       if (retry > 0) {
         console.warn(`请求失败，正在重试 (剩余${retry}次):`, error)
-        return this.fetchWithTimeout(url, options, timeout, retry - 1)
+        return this.fetchWithTimeout(url, options, timeout, retry - 1, signal)
       }
 
       throw error
+    } finally {
+      clearTimeout(timeoutId)
+      signal?.removeEventListener('abort', onExternalAbort)
     }
   }
 
@@ -56,7 +71,7 @@ class ApiService {
   }
 
   // 搜索视频
-  async searchVideos(query: string, api: VideoApi): Promise<SearchResponse> {
+  async searchVideos(query: string, api: VideoApi, signal?: AbortSignal): Promise<SearchResponse> {
     try {
       if (!query) {
         throw new Error('缺少搜索参数')
@@ -68,8 +83,8 @@ class ApiService {
 
       const apiUrl = this.buildApiUrl(api.url, API_CONFIG.search.path, encodeURIComponent(query))
 
-      console.log(`🔍 [${api.name}] 搜索关键词: "${query}"`)
-      console.log(`🔍 [${api.name}] 请求URL: ${apiUrl}`)
+      log(`🔍 [${api.name}] 搜索关键词: "${query}"`)
+      log(`🔍 [${api.name}] 请求URL: ${apiUrl}`)
 
       const response = await this.fetchWithTimeout(
         PROXY_URL + encodeURIComponent(apiUrl),
@@ -78,6 +93,7 @@ class ApiService {
         },
         api.timeout,
         api.retry,
+        signal,
       )
 
       if (!response.ok) {
@@ -102,9 +118,9 @@ class ApiService {
         throw new Error('API返回的数据格式无效')
       }
 
-      console.log(`✅ [${api.name}] 返回 ${data.list.length} 条结果`)
+      log(`✅ [${api.name}] 返回 ${data.list.length} 条结果`)
       if (data.list.length > 0) {
-        console.log(`   前3条: ${data.list.slice(0, 3).map((item: VideoItem) => item.vod_name).join(', ')}`)
+        log(`   前3条: ${data.list.slice(0, 3).map((item: VideoItem) => item.vod_name).join(', ')}`)
       }
 
       // 过滤结果：检查是否与搜索关键词相关
@@ -129,7 +145,7 @@ class ApiService {
       if (filteredList.length === 0 && data.list.length > 0) {
         console.warn(`⚠️ [${api.name}] 返回的 ${data.list.length} 条结果都与关键词"${query}"不相关，已过滤`)
       } else if (filteredList.length < data.list.length) {
-        console.log(`🔍 [${api.name}] 过滤后剩余 ${filteredList.length} 条相关结果（原 ${data.list.length} 条）`)
+        log(`🔍 [${api.name}] 过滤后剩余 ${filteredList.length} 条相关结果（原 ${data.list.length} 条）`)
       }
 
       // 添加源信息到每个结果
@@ -144,6 +160,13 @@ class ApiService {
         list: filteredList,
       }
     } catch (error) {
+      if (signal?.aborted) {
+        return {
+          code: 400,
+          msg: '请求已取消',
+          list: [],
+        }
+      }
       console.error(`❌ [${api.name}] 搜索错误:`, error)
       return {
         code: 400,
@@ -193,48 +216,16 @@ class ApiService {
 
       // 提取播放地址
       if (videoDetail.vod_play_url) {
-        const playSources = videoDetail.vod_play_url.split('$$$')
-        const playFroms = (videoDetail.vod_play_from || '').split('$$$')
-
-        if (playSources.length > 0) {
-          // 优先选择包含 m3u8 的源
-          let sourceIndex = playFroms.findIndex((from: string) =>
-            from.toLowerCase().includes('m3u8'),
-          )
-
-          // 如果没找到，默认使用最后一个（原有逻辑）
-          if (sourceIndex === -1) {
-            sourceIndex = playSources.length - 1
-          }
-
-          // 确保索引在有效范围内
-          if (sourceIndex >= playSources.length) {
-            sourceIndex = playSources.length - 1
-          }
-
-          const mainSource = playSources[sourceIndex]
-          const episodeList = mainSource.split('#')
-
-          episodes = episodeList
-            .map((ep: string) => {
-              const parts = ep.split('$')
-              return parts.length > 1 ? parts[1] : ''
-            })
-            .filter(
-              (url: string) => url && (url.startsWith('http://') || url.startsWith('https://')),
-            )
-
-          episodeNames = episodeList.map((ep: string, index: number) => {
-            const parts = ep.split('$')
-            return parts.length > 1 ? parts[0] : `第${index + 1}集`
-          })
-        }
+        const parsed = parsePlaySources(videoDetail.vod_play_url, videoDetail.vod_play_from || '')
+        episodes = parsed.episodes
+        episodeNames = parsed.episodeNames
       }
 
       // 如果没有找到播放地址，尝试使用正则表达式
       if (episodes.length === 0 && videoDetail.vod_content) {
         const matches = videoDetail.vod_content.match(M3U8_PATTERN) || []
         episodes = matches.map((link: string) => link.replace(/^\$/, ''))
+        episodeNames = episodes.map((_, index) => `第${index + 1}集`)
       }
 
       return {
@@ -311,31 +302,25 @@ class ApiService {
       return Promise.resolve([])
     }
 
-    let aborted = false
-    if (signal) {
-      if (signal.aborted) {
-        return Promise.reject(new DOMException('Aborted', 'AbortError'))
-      }
-      signal.addEventListener('abort', () => {
-        aborted = true
-      })
+    if (signal?.aborted) {
+      return Promise.reject(new DOMException('Aborted', 'AbortError'))
     }
 
     const seen = new Set<string>()
     const limiter = this.createConcurrencyLimiter(3)
 
     // 为每个API添加优先级（索引越小优先级越高）
-    const tasks = selectedAPIs.map((api, index) =>
+    const tasks = selectedAPIs.map(api =>
       limiter(async () => {
-        if (aborted) return [] as VideoItem[]
+        if (signal?.aborted) return [] as VideoItem[]
         let results: VideoItem[] = []
         try {
-          results = await this.searchSingleSource(query, api)
+          results = await this.searchSingleSource(query, api, signal)
         } catch (error) {
-          if (aborted) return [] as VideoItem[]
+          if (signal?.aborted) return [] as VideoItem[]
           console.warn(`${api.name} 源搜索失败:`, error)
         }
-        if (aborted) return [] as VideoItem[]
+        if (signal?.aborted) return [] as VideoItem[]
 
         const newUnique = results.filter(item => {
           const key = `${item.source_code}_${item.vod_id}`
@@ -345,12 +330,7 @@ class ApiService {
           }
           return false
         })
-        if (aborted || newUnique.length === 0) return [] as VideoItem[]
-
-        // 给每个结果添加源的优先级
-        newUnique.forEach(item => {
-          (item as any).sourcePriority = index
-        })
+        if (signal?.aborted || newUnique.length === 0) return [] as VideoItem[]
 
         onNewResults(newUnique)
         return newUnique
@@ -358,21 +338,26 @@ class ApiService {
     )
 
     const allPromise: Promise<VideoItem[]> = Promise.all(tasks).then(chunks => chunks.flat())
-    if (signal) {
-      const abortPromise = new Promise<VideoItem[]>((_, reject) => {
-        signal.addEventListener('abort', () => {
-          reject(new DOMException('Aborted', 'AbortError'))
-        })
-      })
-      return Promise.race([allPromise, abortPromise])
-    }
-    return allPromise
+    if (!signal) return allPromise
+
+    const abortPromise = new Promise<VideoItem[]>((_, reject) => {
+      const onAbort = () => reject(new DOMException('Aborted', 'AbortError'))
+      signal.addEventListener('abort', onAbort, { once: true })
+      const cleanup = () => signal.removeEventListener('abort', onAbort)
+      allPromise.then(cleanup, cleanup)
+    })
+
+    return Promise.race([allPromise, abortPromise])
   }
 
   // 搜索单个源
-  private async searchSingleSource(query: string, api: VideoApi): Promise<VideoItem[]> {
+  private async searchSingleSource(
+    query: string,
+    api: VideoApi,
+    signal?: AbortSignal,
+  ): Promise<VideoItem[]> {
     try {
-      const result = await this.searchVideos(query, api)
+      const result = await this.searchVideos(query, api, signal)
       if (result.code === 200 && result.list) {
         return result.list
       }

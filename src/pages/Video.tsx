@@ -9,16 +9,15 @@ import Hls, {
   type HlsConfig,
   type LoaderConfiguration,
 } from 'hls.js'
-import { Card, CardBody, Button, Chip, Spinner, Tooltip, Select, SelectItem } from '@heroui/react'
 import type { DetailResponse } from '@/types'
 import { apiService } from '@/services/api.service'
 import { useApiStore } from '@/store/apiStore'
 import { useViewingHistoryStore } from '@/store/viewingHistoryStore'
 import { useSettingStore } from '@/store/settingStore'
 import { useDocumentTitle } from '@/hooks'
-import { ArrowUpIcon, ArrowDownIcon } from '@/components/icons'
 import _ from 'lodash'
 import { toast } from 'sonner'
+import { getProxiedImageUrl } from '@/utils/imageProxy'
 
 // 过滤可疑的广告内容
 function filterAdsFromM3U8(m3u8Content: string) {
@@ -234,6 +233,8 @@ export default function Video() {
     const art = new Artplayer({
       container: containerRef.current,
       url: detail.episodes[selectedEpisode],
+      // 用影片封面做播放前封面，避免直接暴露源站首帧里的贴片广告
+      poster: getProxiedImageUrl(detail.videoInfo?.cover || '') || '',
       volume: 0.7,
       isLive: false,
       muted: false,
@@ -473,11 +474,10 @@ export default function Video() {
   // 加载状态
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="text-center">
-          <Spinner size="lg" />
-          <p className="mt-4 text-gray-500">正在加载视频信息...</p>
-        </div>
+      <div className="flex flex-col gap-4 pt-6">
+        <div className="h-6 w-1/3 animate-pulse rounded bg-surface-2" />
+        <div className="aspect-video w-full animate-pulse rounded-xl bg-surface-2" />
+        <p className="text-center text-sm text-muted-fg">正在加载视频信息…</p>
       </div>
     )
   }
@@ -485,153 +485,152 @@ export default function Video() {
   // 错误状态
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <Card className="w-full max-w-sm">
-          <CardBody className="text-center">
-            <p className="mb-4 text-red-500">{error}</p>
-            <Button className="w-full" onPress={() => navigate(-1)} variant="flat">
-              返回
-            </Button>
-          </CardBody>
-        </Card>
+      <div className="flex flex-col items-center gap-3 py-24 text-center">
+        <p className="text-base font-medium text-fg">{error}</p>
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="mt-2 rounded-full border border-line px-4 py-2 text-sm text-fg-soft transition hover:text-fg"
+        >
+          返回
+        </button>
       </div>
     )
   }
 
-  // 如果没有数据，显示错误信息
+  // 没有播放数据
   if (!detail || !detail.episodes || detail.episodes.length === 0) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <Card className="w-full max-w-sm">
-          <CardBody className="text-center">
-            <p className="mb-4 text-gray-500">无法获取播放信息</p>
-            <Button className="w-full" onPress={() => navigate(-1)} variant="flat">
-              返回
-            </Button>
-          </CardBody>
-        </Card>
+      <div className="flex flex-col items-center gap-3 py-24 text-center">
+        <p className="text-base font-medium text-fg">无法获取播放信息</p>
+        <p className="text-sm text-muted-fg">这个源可能暂时不可用，回上一页换个源试试。</p>
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="mt-2 rounded-full border border-line px-4 py-2 text-sm text-fg-soft transition hover:text-fg"
+        >
+          返回
+        </button>
+      </div>
+    )
+  }
+
+  // 集数越界：给出明确提示，而不是渲染一个空白播放器
+  if (selectedEpisode < 0 || selectedEpisode >= detail.episodes.length) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-24 text-center">
+        <p className="text-base font-medium text-fg">这一集不存在</p>
+        <p className="text-sm text-muted-fg">
+          链接请求的是第 {selectedEpisode + 1} 集，这个源当前只有 {detail.episodes.length} 集。
+        </p>
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={() => navigate(`/video/${sourceCode}/${vodId}/0`, { replace: true })}
+            className="rounded-full border border-line px-4 py-2 text-sm text-fg-soft transition hover:border-line-strong hover:text-fg"
+          >
+            从第 1 集播放
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="rounded-full border border-line px-4 py-2 text-sm text-fg-soft transition hover:border-line-strong hover:text-fg"
+          >
+            返回
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto max-w-6xl p-2 sm:p-4">
-      {/* 视频信息 - 移动端在播放器上方，桌面端浮层 */}
-      <div className="mb-4 flex flex-col gap-2 md:hidden">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold text-gray-600">{sourceName}</p>
-            <h4 className="text-lg font-bold">{getTitle()}</h4>
-          </div>
-          <Button size="sm" variant="flat" onPress={() => navigate(-1)}>
-            返回
-          </Button>
+    <div className="mx-auto max-w-5xl pt-5 pb-16">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs text-muted-fg">{sourceName}</p>
+          <h1 className="mt-0.5 truncate text-lg font-semibold tracking-tight text-fg sm:text-xl">
+            {getTitle()}
+          </h1>
+          <p className="mt-1 text-xs text-muted-fg">
+            第 {selectedEpisode + 1} 集 · 共 {detail.episodes.length} 集
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Chip size="sm" color="primary" variant="flat">
-            第 {selectedEpisode + 1} 集
-          </Chip>
-          <p className="text-sm text-gray-600">共 {detail.episodes.length} 集</p>
-        </div>
-      </div>
-
-      {/* 播放器卡片 */}
-      <div className="mb-4 hidden items-center justify-between md:flex">
-        <div className="flex items-center gap-4">
-          <div>
-            <p className="text-sm font-semibold text-gray-500">{sourceName}</p>
-            <h4 className="text-xl font-bold">{getTitle()}</h4>
-          </div>
-          <div className="flex items-center gap-2">
-            <Chip size="sm" color="primary" variant="flat">
-              第 {selectedEpisode + 1} 集
-            </Chip>
-            <p className="text-sm text-gray-500">共 {detail.episodes.length} 集</p>
-          </div>
-        </div>
-        <Button size="sm" variant="flat" onPress={() => navigate(-1)}>
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-sm text-fg-soft transition hover:border-line-strong hover:text-fg"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
           返回
-        </Button>
+        </button>
       </div>
 
-      <Card className="mb-4 border-none sm:mb-6" radius="lg">
-        {/* Removed absolute header to fix display issues, moved info to top of card or separate div above */}
-        <CardBody className="p-0">
-          <div
-            id="player"
-            ref={containerRef}
-            className="flex aspect-video w-full items-center rounded-lg bg-black"
-          />
-        </CardBody>
-      </Card>
+      <div className="overflow-hidden rounded-xl border border-line bg-black shadow-[var(--shadow-card)]">
+        <div id="player" ref={containerRef} className="aspect-video w-full" />
+      </div>
 
-      {/* 选集列表 */}
-      {detail.videoInfo?.episodes_names && detail.videoInfo?.episodes_names.length > 0 && (
-        <div className="mt-4 flex flex-col">
-          <div className="flex flex-col gap-2 p-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-gray-900">选集</h2>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="light"
-                  onPress={() => setIsReversed(!isReversed)}
-                  startContent={
-                    isReversed ? <ArrowUpIcon size={18} /> : <ArrowDownIcon size={18} />
-                  }
-                  className="min-w-unit-16 text-sm text-gray-600"
+      {detail.videoInfo?.episodes_names && detail.videoInfo.episodes_names.length > 0 ? (
+        <section className="mt-6">
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="h-5 w-1 rounded-full bg-brand" />
+              <h2 className="text-lg font-semibold text-fg">选集</h2>
+              <span className="text-xs text-muted-fg">共 {detail.videoInfo.episodes_names.length} 集</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {pageRanges.length > 1 ? (
+                <select
+                  value={currentPageRange}
+                  onChange={event => setCurrentPageRange(event.target.value)}
+                  className="h-8 rounded-lg border border-line bg-surface-2 px-2 text-xs text-fg outline-none"
+                  aria-label="选择集数范围"
                 >
-                  {isReversed ? '正序' : '倒序'}
-                </Button>
-                {pageRanges.length > 1 && (
-                  <Select
-                    size="sm"
-                    selectedKeys={[currentPageRange]}
-                    onChange={e => setCurrentPageRange(e.target.value)}
-                    className="w-32"
-                    classNames={{
-                      trigger: 'bg-white/30 backdrop-blur-md border border-gray-200',
-                      value: 'text-gray-800 font-medium',
-                      popoverContent: 'bg-white/40 backdrop-blur-2xl border border-gray-200/50',
-                    }}
-                    aria-label="选择集数范围"
-                  >
-                    {pageRanges.map(range => (
-                      <SelectItem key={range.value}>{range.label}</SelectItem>
-                    ))}
-                  </Select>
-                )}
-              </div>
+                  {pageRanges.map(range => (
+                    <option key={range.value} value={range.value}>
+                      {range.label}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => setIsReversed(!isReversed)}
+                className="flex h-8 items-center gap-1.5 rounded-lg border border-line px-2.5 text-xs text-fg-soft transition hover:text-fg"
+              >
+                {isReversed ? '倒序' : '正序'}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l3 3M17 4l-3 3" />
+                </svg>
+              </button>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3 rounded-lg bg-white/30 p-4 pt-0 shadow-lg/5 backdrop-blur-md sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-8">
+
+          <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
             {currentPageEpisodes.map(({ name, displayIndex, actualIndex }) => {
+              const active = selectedEpisode === actualIndex
               return (
-                <Tooltip
+                <button
                   key={`${name}-${displayIndex}`}
-                  content={name}
-                  placement="top"
-                  delay={1000}
+                  type="button"
+                  title={name}
+                  onClick={() => handleEpisodeChange(displayIndex)}
+                  className={`flex h-10 items-center justify-center rounded-lg border px-2 text-xs transition ${
+                    active
+                      ? 'border-brand bg-brand font-semibold text-white'
+                      : 'border-line bg-surface text-fg-soft hover:border-brand/50 hover:bg-brand-soft hover:text-brand'
+                  }`}
                 >
-                  <Button
-                    size="md"
-                    color="default"
-                    variant="shadow"
-                    className={
-                      selectedEpisode === actualIndex
-                        ? 'border border-gray-200 bg-gray-900 text-white drop-shadow-2xl'
-                        : 'border border-gray-200 bg-white/30 text-gray-800 drop-shadow-2xl backdrop-blur-md transition-all duration-300 hover:scale-105 hover:bg-black/80 hover:text-white'
-                    }
-                    onPress={() => handleEpisodeChange(displayIndex)}
-                  >
-                    <span className="overflow-hidden text-ellipsis whitespace-nowrap">{name}</span>
-                  </Button>
-                </Tooltip>
+                  <span className="truncate">{name}</span>
+                </button>
               )
             })}
           </div>
-        </div>
-      )}
+        </section>
+      ) : null}
     </div>
   )
 }

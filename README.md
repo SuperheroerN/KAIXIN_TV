@@ -77,11 +77,8 @@ pnpm dev
 
 ### 在线部署
 
-查看 [详细部署指南](DEPLOYMENT_GUIDE.md) 了解如何部署到：
-- Cloudflare Pages（推荐）
-- Vercel
-- Netlify
-- Docker
+本项目只支持 **Cloudflare Pages**（前端静态资源 + Pages Functions 代理与鉴权）。
+详细步骤见 [部署指南](DEPLOYMENT.md)。
 
 ## 📦 部署指南
 
@@ -89,7 +86,7 @@ pnpm dev
 
 🚀 **新手推荐**：查看 [5分钟快速开始指南](QUICKSTART.md)
 
-📚 **详细教程**：查看 [完整部署指南](DEPLOYMENT_GUIDE.md)
+📚 **详细教程**：查看 [完整部署指南](DEPLOYMENT.md)
 
 ### Cloudflare Pages (推荐)
 
@@ -99,47 +96,19 @@ pnpm dev
 4. 配置构建设置：
    - **构建命令**: `pnpm build`
    - **输出目录**: `dist`
-   - **Node 版本**: `18`
+   - **Node 版本**: `20`
 5. 添加环境变量（可选）：
    ```
-   VITE_INITIAL_VIDEO_SOURCES=[...]
-   VITE_ACCESS_PASSWORD=your_password
+   # 构建期变量（会被打进前端包）
+   VITE_INITIAL_VIDEO_SOURCES=猫眼资源|https://api.maoyanapi.top/api.php/provide/vod,百度资源|https://api.apibdzy.com/api.php/provide/vod,红牛资源|https://www.hongniuzy2.com/api.php/provide/vod,U酷资源|https://api.ukuapi88.com/api.php/provide/vod
+   VITE_SITE_NAME=开心影视
+
+   # 运行时密钥（不带 VITE_ 前缀，只在 Pages Functions 里可读）
+   ACCESS_PASSWORD=your_password
    ```
+
+   `ACCESS_PASSWORD` 在边缘校验，前端包里没有密码；详见 [DEPLOYMENT.md](DEPLOYMENT.md)。
 6. 部署完成！
-
-### Vercel
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/kaixin-tv)
-
-1. 点击上方按钮一键部署
-2. 或手动部署：
-   ```bash
-   pnpm build
-   vercel --prod
-   ```
-
-### Netlify
-
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/your-username/kaixin-tv)
-
-### Docker
-
-```bash
-# 构建镜像
-docker build -t kaixin-tv .
-
-# 运行容器
-docker run -d -p 3000:80 \
-  -e VITE_INITIAL_VIDEO_SOURCES='[...]' \
-  -e VITE_ACCESS_PASSWORD='your_password' \
-  kaixin-tv
-```
-
-或使用 Docker Compose：
-
-```bash
-docker-compose up -d
-```
 
 ## ⚙️ 配置说明
 
@@ -149,29 +118,25 @@ docker-compose up -d
 
 ```env
 VITE_INITIAL_VIDEO_SOURCES=[
-  {"name":"无尽资源","url":"https://api.wujinapi.me/api.php/provide/vod","isEnabled":true},
-  {"name":"茅台资源","url":"https://caiji.maotaizy.cc/api.php/provide/vod","isEnabled":true},
-  {"name":"猫眼资源","url":"https://api.maoyanapi.top/api.php/provide/vod","isEnabled":true}
+  {"name":"猫眼资源","url":"https://api.maoyanapi.top/api.php/provide/vod","isEnabled":true},
+  {"name":"百度资源","url":"https://api.apibdzy.com/api.php/provide/vod","isEnabled":true},
+  {"name":"红牛资源","url":"https://www.hongniuzy2.com/api.php/provide/vod","isEnabled":true},
+  {"name":"U酷资源","url":"https://api.ukuapi88.com/api.php/provide/vod","isEnabled":true}
 ]
 ```
 
-### 访问密码（可选）
+### 访问密码（Cloudflare Pages，可选）
+
+密码是 **运行时密钥**，在 Cloudflare Pages 控制台设置，不加 `VITE_` 前缀：
 
 ```env
-# 留空表示公开访问
-VITE_ACCESS_PASSWORD=
-
-# 设置密码保护
-VITE_ACCESS_PASSWORD=your_password_here
+ACCESS_PASSWORD=your_password_here   # 不设置则站点公开
+AUTH_SECRET=一串长随机字符            # 可选，用于签名登录 Cookie
 ```
 
-设置密码后，访问网站需要输入密码，支持防暴力破解：
-- 3次失败 → 锁定30秒
-- 4次失败 → 锁定1分钟
-- 5次失败 → 锁定2分钟
-- 6次及以上 → 锁定时间递增
+校验发生在边缘函数（`functions/api/auth.ts`），通过后下发 `HttpOnly; Secure; SameSite=Lax` 的签名 Cookie（30 天），`functions/_middleware.ts` 拦截未登录的页面请求。前端包中不含密码，改 localStorage 无法绕过。
 
-## 🛠️ 技术栈
+> 早期版本用 `VITE_ACCESS_PASSWORD` 在前端比对，密码会被打进 JS 包，已移除。需要更强的防护（多用户、审计、SSO）请用 Cloudflare Access。
 
 ### 前端框架
 - **React 18.3** - UI 框架
@@ -216,10 +181,16 @@ kaixin-tv/
 │   ├── styles/          # 样式文件
 │   ├── types/           # TypeScript 类型
 │   └── utils/           # 工具函数
-├── public/              # 静态资源
+├── functions/           # Cloudflare Pages Functions
+│   ├── _middleware.ts   # 访问密码门
+│   ├── _lib/auth.ts     # 会话签名与登录页
+│   ├── api/             # /api/auth、/api/logout
+│   └── proxy.ts         # /proxy 代理（SSRF 与 HTML 拦截）
+├── public/              # 静态资源与 Pages 配置
+│   ├── _headers         # CSP 与安全响应头
+│   ├── _routes.json     # 限定 Functions 调用范围
+│   └── _redirects       # SPA 回退
 ├── .env.example         # 环境变量示例
-├── docker-compose.yml   # Docker Compose 配置
-├── Dockerfile           # Docker 配置
 ├── package.json         # 项目依赖
 └── vite.config.ts       # Vite 配置
 ```
@@ -288,7 +259,7 @@ kaixin-tv/
 常见原因：
 1. 构建命令错误 - 确保使用 `pnpm build`
 2. 环境变量未配置 - 检查 `VITE_INITIAL_VIDEO_SOURCES`
-3. Node 版本过低 - 使用 Node 18+
+3. Node 版本过低 - 使用 Node 20+
 
 **Q: 如何更新已部署的网站？**
 
@@ -300,11 +271,11 @@ kaixin-tv/
 
 **Q: 如何取消访问密码？**
 
-删除或留空 `.env` 中的 `VITE_ACCESS_PASSWORD`，然后重新部署。
+在 Cloudflare Pages 控制台删除 `ACCESS_PASSWORD` 变量，保存后立即生效（无需重新构建）。
 
 **Q: 忘记访问密码怎么办？**
 
-进入部署平台控制台，查看或修改 `VITE_ACCESS_PASSWORD` 环境变量。
+进入 Cloudflare Pages 项目 → Settings → Variables and Secrets，直接修改 `ACCESS_PASSWORD`。改完旧会话会自动失效（除非另外固定了 `AUTH_SECRET`）。
 
 **Q: 豆瓣推荐不显示？**
 
@@ -313,7 +284,7 @@ kaixin-tv/
 2. 代理失败 - 检查浏览器控制台
 3. API限流 - 稍后再试
 
-更多问题请查看 [详细部署指南](DEPLOYMENT_GUIDE.md)
+更多问题请查看 [详细部署指南](DEPLOYMENT.md)
 
 ## 🙏 致谢
 

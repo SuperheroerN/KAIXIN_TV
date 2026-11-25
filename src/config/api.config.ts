@@ -25,20 +25,22 @@ export const M3U8_PATTERN = /\$https?:\/\/[^"'\s]+?\.m3u8/g
 
 import type { VideoApi } from '@/types/video'
 import { INITIAL_CONFIG } from './initialConfig'
+import { log } from '@/utils/logger'
+import { DEFAULT_SETTINGS } from './settings.config'
 
 // 从环境变量获取初始视频源
-export const getInitialVideoSources = async (): Promise<VideoApi[]> => {
-  console.log('🔍 [环境变量检查] 开始读取视频源配置...')
+const loadInitialVideoSources = async (): Promise<VideoApi[]> => {
+  log('🔍 [环境变量检查] 开始读取视频源配置...')
   
   // 1. First priority: Full JSON config from VITE_INITIAL_CONFIG
   if (INITIAL_CONFIG?.videoSources && Array.isArray(INITIAL_CONFIG.videoSources)) {
-    console.log('✅ [环境变量检查] 从 VITE_INITIAL_CONFIG 读取到视频源:', INITIAL_CONFIG.videoSources)
+    log('✅ [环境变量检查] 从 VITE_INITIAL_CONFIG 读取到视频源:', INITIAL_CONFIG.videoSources)
     return parseVideoSources(INITIAL_CONFIG.videoSources)
   }
 
   // 2. Second priority: Specific VITE_INITIAL_VIDEO_SOURCES
   let envSources = import.meta.env.VITE_INITIAL_VIDEO_SOURCES
-  console.log('🔍 [环境变量检查] VITE_INITIAL_VIDEO_SOURCES =', envSources)
+  log('🔍 [环境变量检查] VITE_INITIAL_VIDEO_SOURCES =', envSources)
 
   // 验证url
   try {
@@ -54,7 +56,7 @@ export const getInitialVideoSources = async (): Promise<VideoApi[]> => {
   }
 
   if (!envSources || typeof envSources !== 'string') {
-    console.log('⚠️ [环境变量检查] 未配置 VITE_INITIAL_VIDEO_SOURCES 或格式不正确')
+    log('⚠️ [环境变量检查] 未配置 VITE_INITIAL_VIDEO_SOURCES 或格式不正确')
     return []
   }
 
@@ -65,11 +67,11 @@ export const getInitialVideoSources = async (): Promise<VideoApi[]> => {
       .replace(/['"`]\s*$/, '') // 移除结尾的引号
       .trim()
 
-    console.log('🔍 [环境变量检查] 清理后的内容:', cleanedSources)
+    log('🔍 [环境变量检查] 清理后的内容:', cleanedSources)
 
     // 尝试解析简单格式：名称|URL,名称|URL
     if (cleanedSources.includes('|') && !cleanedSources.startsWith('[')) {
-      console.log('🔍 [环境变量检查] 检测到简单格式，开始解析...')
+      log('🔍 [环境变量检查] 检测到简单格式，开始解析...')
       
       const sources = cleanedSources
         .split(',')
@@ -86,22 +88,22 @@ export const getInitialVideoSources = async (): Promise<VideoApi[]> => {
             detailUrl: url,
             isEnabled: true,
             updatedAt: new Date(),
-            timeout: 3000,
-            retry: 3,
+            timeout: DEFAULT_SETTINGS.network.defaultTimeout,
+            retry: DEFAULT_SETTINGS.network.defaultRetry,
           } as VideoApi
         })
         .filter((source): source is VideoApi => source !== null)
 
-      console.log('✅ 成功加载视频源配置 (简单格式):', sources.length, '个源')
+      log('✅ 成功加载视频源配置 (简单格式):', sources.length, '个源')
       return sources
     }
 
     // 尝试解析 JSON 格式
-    console.log('🔍 [环境变量检查] 尝试 JSON 格式解析...')
+    log('🔍 [环境变量检查] 尝试 JSON 格式解析...')
     const jsonSources = JSON.parse(cleanedSources)
     const sources = Array.isArray(jsonSources) ? jsonSources : [jsonSources]
 
-    console.log('✅ 成功加载视频源配置 (JSON格式):', sources.length, '个源')
+    log('✅ 成功加载视频源配置 (JSON格式):', sources.length, '个源')
     const parsedSources = parseVideoSources(sources)
     return parsedSources
   } catch (error) {
@@ -110,6 +112,28 @@ export const getInitialVideoSources = async (): Promise<VideoApi[]> => {
     return []
   }
 }
+
+// 按 VITE_SOURCE_ORDER 给源排序权重：写源名称（或 id），逗号分隔，越靠前越优先
+const applySourcePriority = (sources: VideoApi[]): VideoApi[] => {
+  const order = String(import.meta.env.VITE_SOURCE_ORDER ?? '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
+
+  if (order.length === 0) return sources
+
+  return sources.map((source, index) => {
+    const nameIndex = order.indexOf(source.name)
+    const position = nameIndex !== -1 ? nameIndex : order.indexOf(source.id)
+    return {
+      ...source,
+      priority: position === -1 ? order.length + index : position,
+    }
+  })
+}
+
+export const getInitialVideoSources = async (): Promise<VideoApi[]> =>
+  applySourcePriority(await loadInitialVideoSources())
 
 // Helper to parse and validate video sources
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

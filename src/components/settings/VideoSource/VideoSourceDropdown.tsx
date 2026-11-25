@@ -31,11 +31,11 @@ export default function VideoSourceDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="bg-white/40 backdrop-blur-xl hover:bg-gray-100/50">
+        <Button variant="outline" className="bg-surface-2 backdrop-blur-xl hover:bg-surface-2/50">
           添加源 <ChevronDown />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-40 bg-white/10 backdrop-blur-lg" align="end">
+      <DropdownMenuContent className="w-40 bg-surface backdrop-blur-lg" align="end">
         <DropdownMenuItem className="px-2 hover:cursor-pointer" onClick={addVideoSource}>
           手动添加
         </DropdownMenuItem>
@@ -43,7 +43,7 @@ export default function VideoSourceDropdown({
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="px-2">导入视频源</DropdownMenuSubTrigger>
             <DropdownMenuPortal>
-              <DropdownMenuSubContent className="bg-white/10 backdrop-blur-lg">
+              <DropdownMenuSubContent className="bg-surface backdrop-blur-lg">
                 <DropdownMenuItem
                   className="hover:cursor-pointer"
                   onClick={addVideoSourceFromJSONFile}
@@ -62,7 +62,7 @@ export default function VideoSourceDropdown({
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="px-2">导出视频源</DropdownMenuSubTrigger>
             <DropdownMenuPortal>
-              <DropdownMenuSubContent className="bg-white/10 backdrop-blur-lg">
+              <DropdownMenuSubContent className="bg-surface backdrop-blur-lg">
                 <DropdownMenuItem className="hover:cursor-pointer" onClick={onExportToFile}>
                   导出为文件
                 </DropdownMenuItem>

@@ -5,8 +5,7 @@
 ## 📋 目录
 
 - [方式一：Cloudflare Pages（推荐，最简单）](#方式一cloudflare-pages推荐最简单)
-- [方式二：Vercel（一键部署）](#方式二vercel一键部署)
-- [方式三：本地运行](#方式三本地运行)
+- [方式二：本地运行](#方式二本地运行)
 
 ---
 
@@ -64,12 +63,12 @@
    **变量名**：`VITE_INITIAL_VIDEO_SOURCES`  
    **值**：
    ```json
-   [{"name":"无尽资源","url":"https://api.wujinapi.me/api.php/provide/vod","isEnabled":true},{"name":"茅台资源","url":"https://caiji.maotaizy.cc/api.php/provide/vod","isEnabled":true},{"name":"猫眼资源","url":"https://api.maoyanapi.top/api.php/provide/vod","isEnabled":true}]
+   [{"name":"猫眼资源","url":"https://api.maoyanapi.top/api.php/provide/vod","isEnabled":true},{"name":"百度资源","url":"https://api.apibdzy.com/api.php/provide/vod","isEnabled":true},{"name":"红牛资源","url":"https://www.hongniuzy2.com/api.php/provide/vod","isEnabled":true},{"name":"U酷资源","url":"https://api.ukuapi88.com/api.php/provide/vod","isEnabled":true}]
    ```
    
-   **可选 - 添加访问密码**：
+   **可选 - 添加访问密码**（运行时密钥，不带 `VITE_` 前缀）：
    
-   **变量名**：`VITE_ACCESS_PASSWORD`  
+   **变量名**：`ACCESS_PASSWORD`  
    **值**：`your_password`（改成你的密码）
 
 5. **开始部署**
@@ -101,28 +100,7 @@
 
 ---
 
-## 方式二：Vercel（一键部署）
-
-### 步骤1：一键部署
-
-点击下方按钮：
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/kaixin-tv)
-
-### 步骤2：配置
-
-1. 使用 GitHub 登录 Vercel
-2. 授权访问
-3. 添加环境变量：
-   - `VITE_INITIAL_VIDEO_SOURCES`
-   - `VITE_ACCESS_PASSWORD`（可选）
-4. 点击 **Deploy**
-5. 等待部署完成
-6. 访问分配的域名
-
----
-
-## 方式三：本地运行
+## 方式二：本地运行
 
 ### 适合人群
 
@@ -197,17 +175,17 @@ pnpm dev
    - 或在部署平台修改环境变量
 
 2. **设置访问密码**
-   - 添加 `VITE_ACCESS_PASSWORD` 环境变量
+   - 添加 `ACCESS_PASSWORD` 环境变量
    - 重新部署
 
 3. **自定义域名**
    - Cloudflare Pages: Settings → Custom domains
-   - Vercel: Settings → Domains
+   - 自定义域名：Pages 项目 → Custom domains
    - 添加你的域名
 
 ### 进阶功能
 
-- 📖 查看 [详细部署指南](DEPLOYMENT_GUIDE.md)
+- 📖 查看 [详细部署指南](DEPLOYMENT.md)
 - 🛠️ 查看 [贡献指南](CONTRIBUTING.md)
 - 📚 查看 [README](README.md)
 
@@ -221,13 +199,14 @@ pnpm dev
 
 ```json
 [
-  {"name":"无尽资源","url":"https://api.wujinapi.me/api.php/provide/vod","isEnabled":true},
-  {"name":"茅台资源","url":"https://caiji.maotaizy.cc/api.php/provide/vod","isEnabled":true},
   {"name":"猫眼资源","url":"https://api.maoyanapi.top/api.php/provide/vod","isEnabled":true},
   {"name":"百度资源","url":"https://api.apibdzy.com/api.php/provide/vod","isEnabled":true},
-  {"name":"红牛资源","url":"https://www.hongniuzy2.com/api.php/provide/vod","isEnabled":true}
+  {"name":"红牛资源","url":"https://www.hongniuzy2.com/api.php/provide/vod","isEnabled":true},
+  {"name":"U酷资源","url":"https://api.ukuapi88.com/api.php/provide/vod","isEnabled":true}
 ]
 ```
+
+> 上面四个是当前实测可用的源。无尽资源和极速资源响应要 25 秒以上，会被超时切断，已移除。
 
 ### 访问密码
 
@@ -252,8 +231,8 @@ pnpm dev
 ### 遇到问题？
 
 1. **查看文档**
-   - [详细部署指南](DEPLOYMENT_GUIDE.md)
-   - [常见问题](DEPLOYMENT_GUIDE.md#常见问题)
+   - [详细部署指南](DEPLOYMENT.md)
+   - [常见问题](DEPLOYMENT.md#常见问题)
 
 2. **检查日志**
    - 浏览器控制台（F12）
@@ -270,7 +249,7 @@ pnpm dev
 简要描述你遇到的问题
 
 **部署平台**：
-Cloudflare Pages / Vercel / Netlify / 本地
+Cloudflare Pages / 本地
 
 **错误信息**：
 粘贴错误信息或截图
@@ -278,7 +257,7 @@ Cloudflare Pages / Vercel / Netlify / 本地
 **环境变量**：
 （隐藏敏感信息）
 VITE_INITIAL_VIDEO_SOURCES=[...]
-VITE_ACCESS_PASSWORD=***
+ACCESS_PASSWORD=***
 
 **浏览器控制台**：
 粘贴控制台错误信息
@@ -306,6 +285,6 @@ VITE_ACCESS_PASSWORD=***
 
 Made with ❤️ by KAIXIN TV Team
 
-[返回首页](README.md) | [详细指南](DEPLOYMENT_GUIDE.md) | [贡献指南](CONTRIBUTING.md)
+[返回首页](README.md) | [详细指南](DEPLOYMENT.md) | [贡献指南](CONTRIBUTING.md)
 
 </div>

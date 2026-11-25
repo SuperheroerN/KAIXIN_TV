@@ -4,6 +4,62 @@
 @source '../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
 @custom-variant dark (&:is(.dark *));
 
+/* ==========================================================
+   设计令牌（新 UI 统一使用这些变量）
+   ========================================================== */
+:root {
+  --app-bg: #eef0f4;
+  --app-bg-soft: #e6e9ef;
+  --surface: #ffffff;
+  --surface-2: #f1f3f7;
+  --surface-3: #e6e9ef;
+  --line: rgba(15, 23, 42, 0.08);
+  --line-strong: rgba(15, 23, 42, 0.14);
+  --fg: #0f172a;
+  --fg-soft: #334155;
+  --fg-muted: #64748b;
+  --brand: #e11d33;
+  --brand-soft: rgba(225, 29, 51, 0.1);
+  --brand-fg: #ffffff;
+  --gold: #f0a020;
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px -12px rgba(15, 23, 42, 0.25);
+}
+
+body.night-mode {
+  --app-bg: #08090c;
+  --app-bg-soft: #0d0f14;
+  --surface: #12141a;
+  --surface-2: #171a21;
+  --surface-3: #1f232b;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --fg: #f4f5f7;
+  --fg-soft: #cbd2dc;
+  --fg-muted: #8b94a3;
+  --brand: #ff3b4e;
+  --brand-soft: rgba(255, 59, 78, 0.14);
+  --brand-fg: #ffffff;
+  --gold: #ffc247;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 18px 40px -24px rgba(0, 0, 0, 0.9);
+}
+
+@theme inline {
+  --color-app: var(--app-bg);
+  --color-app-soft: var(--app-bg-soft);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-fg-soft: var(--fg-soft);
+  --color-muted-fg: var(--fg-muted);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-fg: var(--brand-fg);
+  --color-gold: var(--gold);
+}
+
 :root {
   /*shadcn ui variables*/
   --background: oklch(1 0 0);
@@ -117,6 +173,39 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* shadcn 变量对齐到新的设计令牌，让设置页里的 shadcn 组件也跟着换肤 */
+:root,
+.dark {
+  --background: var(--app-bg);
+  --foreground: var(--fg);
+  --card: var(--surface);
+  --card-foreground: var(--fg);
+  --popover: var(--surface);
+  --popover-foreground: var(--fg);
+  --primary: var(--brand);
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--fg);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--fg-muted);
+  --accent: var(--surface-2);
+  --accent-foreground: var(--fg);
+  --destructive: var(--brand);
+  --destructive-foreground: #ffffff;
+  --border: var(--line-strong);
+  --input: var(--line);
+  --ring: var(--brand);
+  --radius: 0.75rem;
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--fg);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: var(--fg);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--brand);
+}
+
 /*shadcn ui base layer*/
 @layer base {
   * {
@@ -130,17 +219,19 @@
   }
   
   body {
-    @apply text-foreground;
-    /* 白天背景：浅蓝天空渐变 */
-    background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 50%, #FFFFFF 100%);
-    background-attachment: fixed;
-    background-size: 100% 100%;
-    transition: background 0.5s ease;
+    color: var(--fg);
+    background: var(--app-bg);
+    font-family:
+      'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
+      'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
   }
   
-  /* 晚上背景：深蓝紫夜空渐变 - 更柔和的配色 */
   body.night-mode {
-    background: linear-gradient(to bottom, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    background: var(--app-bg);
   }
   
   /* 确保所有内容区域透明，显示背景 */
@@ -151,36 +242,6 @@
   
   /* 夜间模式下调整文字颜色 */
   body.night-mode {
-    color: #E8E8E8;
-  }
-  
-  /* 夜间模式下调整顶部导航栏 - 更透明，更融入背景 */
-  body.night-mode .sticky.top-0 {
-    background-color: rgba(15, 48, 96, 0.7) !important;
-    backdrop-filter: blur(20px);
-    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
-  }
-  
-  /* 夜间模式下调整分类导航栏 - 更透明 */
-  body.night-mode .border-b.bg-white\/80 {
-    background-color: rgba(15, 48, 96, 0.5) !important;
-    backdrop-filter: blur(10px);
-    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
-  }
-  
-  /* 夜间模式下调整输入框 */
-  body.night-mode input,
-  body.night-mode .bg-gray-100\/80 {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    color: #E8E8E8 !important;
-  }
-  
-  body.night-mode input::placeholder {
-    color: rgba(255, 255, 255, 0.5) !important;
-  }
-  
-  /* 夜间模式下调整按钮 */
-  body.night-mode button {
     color: #E8E8E8;
   }
   

@@ -7,6 +7,7 @@ import { useSettingStore } from '@/store/settingStore'
 import ActionDropdown from '@/components/common/ActionDropdown'
 import { usePersonalConfig } from '@/hooks/usePersonalConfig'
 import { useRef, useState } from 'react'
+import { SITE_DESCRIPTION, SITE_NAME, SITE_SUBTITLE } from '@/config/site.config'
 import { URLConfigModal, TextConfigModal } from './ImportConfigModal'
 import { ConfirmModal } from '@/components/common/ConfirmModal'
 
@@ -39,9 +40,10 @@ export default function AboutProject() {
           <OkiLogo size={120} className="drop-shadow-sm" />
         </div>
         <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-800 md:text-3xl dark:text-gray-100">
-            KAIXIN TV
+          <h1 className="text-2xl font-bold tracking-tight text-fg md:text-3xl">
+            {SITE_NAME}
           </h1>
+          <p className="text-xs tracking-[0.2em] text-muted-fg">{SITE_SUBTITLE}</p>
           <div className="flex items-center gap-2">
             <span className="bg-primary/10 text-primary rounded-full px-3 py-0.5 text-xs font-medium md:text-sm">
               v{currentVersion}
@@ -52,10 +54,10 @@ export default function AboutProject() {
 
       {/* Settings Section */}
       <div className="flex flex-col gap-4">
-        <div className="flex flex-row items-center justify-between rounded-lg border border-gray-200 bg-white/40 p-4 transition-all hover:border-gray-300 hover:bg-white/60 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800/40 dark:hover:bg-gray-800/60">
+        <div className="flex flex-row items-center justify-between rounded-lg border border-line bg-surface-2 p-4 transition-all hover:border-line hover:bg-surface hover:shadow-sm dark:border-gray-700 dark:bg-gray-800/40 dark:hover:bg-gray-800/60">
           <div className="space-y-0.5">
-            <Label className="text-base text-gray-800 dark:text-gray-100">自动显示更新日志</Label>
-            <p className="text-sm text-gray-500">检测到新版本时自动弹出更新说明</p>
+            <Label className="text-base text-fg">自动显示更新日志</Label>
+            <p className="text-sm text-muted-fg">检测到新版本时自动弹出更新说明</p>
           </div>
           <Switch
             checked={system.isUpdateLogEnabled}
@@ -64,10 +66,10 @@ export default function AboutProject() {
         </div>
 
         {/* Personal Config Section */}
-        <div className="flex flex-row items-center justify-between rounded-lg border border-gray-200 bg-white/40 p-4 transition-all hover:border-gray-300 hover:bg-white/60 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800/40 dark:hover:bg-gray-800/60">
+        <div className="flex flex-row items-center justify-between rounded-lg border border-line bg-surface-2 p-4 transition-all hover:border-line hover:bg-surface hover:shadow-sm dark:border-gray-700 dark:bg-gray-800/40 dark:hover:bg-gray-800/60">
           <div className="space-y-0.5">
-            <Label className="text-base text-gray-800 dark:text-gray-100">个人配置管理</Label>
-            <p className="text-sm text-gray-500">导入/导出设置与视频源，或恢复默认</p>
+            <Label className="text-base text-fg">个人配置管理</Label>
+            <p className="text-sm text-muted-fg">导入/导出设置与视频源，或恢复默认</p>
           </div>
           <ActionDropdown
             label="配置操作"
@@ -133,15 +135,13 @@ export default function AboutProject() {
       />
 
       {/* Description Section */}
-      <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white/40 p-6 backdrop-blur-xl hover:shadow-sm dark:border-gray-700 dark:bg-gray-800/40">
-        <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200">关于项目</h2>
+      <div className="flex flex-col gap-4 rounded-xl border border-line bg-surface-2 p-6 backdrop-blur-xl hover:shadow-sm dark:border-gray-700 dark:bg-gray-800/40">
+        <h2 className="text-lg font-semibold text-fg-soft">关于项目</h2>
         <div className="space-y-2">
-          <p className="text-base font-medium leading-relaxed text-gray-800 dark:text-gray-200">
-            KAIXIN TV
+          <p className="text-base font-medium leading-relaxed text-fg">
+            {SITE_NAME}
           </p>
-          <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-            聚合多源影视资源，提供流畅观影体验
-          </p>
+          <p className="text-sm leading-relaxed text-fg-soft">{SITE_DESCRIPTION}</p>
           <div className="flex flex-wrap gap-2 pt-2">
             <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
               React 19
@@ -184,32 +184,32 @@ export default function AboutProject() {
       </div>
 
       {/* GitHub Link Section */}
-      <div className="flex flex-col items-center gap-3 rounded-xl border border-gray-200 bg-white/40 p-6 backdrop-blur-xl hover:shadow-sm dark:border-gray-700 dark:bg-gray-800/40">
-        <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200">开源项目</h2>
+      <div className="flex flex-col items-center gap-3 rounded-xl border border-line bg-surface-2 p-6 backdrop-blur-xl hover:shadow-sm dark:border-gray-700 dark:bg-gray-800/40">
+        <h2 className="text-base font-semibold text-fg-soft">开源项目</h2>
         <a
           href="https://github.com/SuperheroerN/KAIXIN_TV"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 rounded-lg border border-gray-300 bg-white px-6 py-3 transition-all hover:border-gray-400 hover:shadow-md dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500"
+          className="flex items-center gap-3 rounded-lg border border-line bg-white px-6 py-3 transition-all hover:border-gray-400 hover:shadow-md dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500"
           title="访问 GitHub 仓库"
         >
-          <svg className="h-6 w-6 text-gray-800 dark:text-gray-200" viewBox="0 0 24 24" fill="currentColor">
+          <svg className="h-6 w-6 text-fg" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
           </svg>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">查看源代码</span>
-          <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <span className="text-sm font-medium text-fg-soft">查看源代码</span>
+          <svg className="h-4 w-4 text-muted-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
         </a>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-muted-fg dark:text-muted-fg">
           如果这个项目对你有帮助，请给一个 ⭐ Star 支持一下！
         </p>
       </div>
 
       {/* Footer Section */}
-      <div className="mt-8 flex flex-col items-center gap-2 border-t border-gray-200/50 pt-8 text-center dark:border-gray-700/50">
-        <p className="text-sm text-gray-500">© {currentYear} KAIXIN TV. All rights reserved.</p>
-        <p className="text-xs text-gray-400">Designed & Built with ❤️ by KAIXIN Team</p>
+      <div className="mt-8 flex flex-col items-center gap-2 border-t border-line/50 pt-8 text-center dark:border-gray-700/50">
+        <p className="text-sm text-muted-fg">© {currentYear} {SITE_NAME}. All rights reserved.</p>
+        <p className="text-xs text-muted-fg">Designed & Built with ❤️ by KAIXIN Team</p>
       </div>
     </div>
   )

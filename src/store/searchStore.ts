@@ -60,6 +60,7 @@ type SearchStore = SearchState & SearchActions
 
 import { useSettingStore } from './settingStore'
 import { useApiStore } from './apiStore'
+import { log } from '@/utils/logger'
 
 export const useSearchStore = create<SearchStore>()(
   devtools(
@@ -155,7 +156,7 @@ export const useSearchStore = create<SearchStore>()(
           const isExpired = now - cached.timestamp > expiryTime
 
           if (isExpired) {
-            console.log(`缓存已过期: ${query}`)
+            log(`缓存已过期: ${query}`)
             // 删除过期缓存
             set(state => {
               delete state.searchResultsCache[query]
@@ -171,16 +172,16 @@ export const useSearchStore = create<SearchStore>()(
               .sort((a, b) => a.id.localeCompare(b.id)),
           )
 
-          console.log('🔍 [缓存检查] 当前视频源数量:', currentSources.length)
-          console.log('🔍 [缓存检查] 当前启用的源:', currentSources.filter(s => s.isEnabled).length)
-          console.log('🔍 [缓存检查] 缓存快照:', cached.videoSourcesSnapshot)
-          console.log('🔍 [缓存检查] 当前快照:', currentSnapshot)
+          log('🔍 [缓存检查] 当前视频源数量:', currentSources.length)
+          log('🔍 [缓存检查] 当前启用的源:', currentSources.filter(s => s.isEnabled).length)
+          log('🔍 [缓存检查] 缓存快照:', cached.videoSourcesSnapshot)
+          log('🔍 [缓存检查] 当前快照:', currentSnapshot)
 
           // 如果缓存没有快照（旧版本缓存），或者快照不匹配，则废弃缓存
           if (!cached.videoSourcesSnapshot || cached.videoSourcesSnapshot !== currentSnapshot) {
-            console.log(`✅ [缓存检查] 视频源状态已变更, 缓存废弃: ${query}`)
-            console.log('   旧快照:', cached.videoSourcesSnapshot)
-            console.log('   新快照:', currentSnapshot)
+            log(`✅ [缓存检查] 视频源状态已变更, 缓存废弃: ${query}`)
+            log('   旧快照:', cached.videoSourcesSnapshot)
+            log('   新快照:', currentSnapshot)
             // 删除无效缓存
             set(state => {
               delete state.searchResultsCache[query]
@@ -188,7 +189,7 @@ export const useSearchStore = create<SearchStore>()(
             return undefined
           }
 
-          console.log('⚠️ [缓存检查] 快照匹配，使用缓存')
+          log('⚠️ [缓存检查] 快照匹配，使用缓存')
           return cached
         },
 
@@ -227,7 +228,7 @@ export const useSearchStore = create<SearchStore>()(
                 new Set([...existing.completedApiIds, ...completedApiIds]),
               )
 
-              console.log('🔄 [缓存更新] 合并结果:', {
+              log('🔄 [缓存更新] 合并结果:', {
                 query,
                 existingCount: existing.results.length,
                 newCount: newResults.length,
@@ -243,7 +244,7 @@ export const useSearchStore = create<SearchStore>()(
                 videoSourcesSnapshot: existing.videoSourcesSnapshot || videoSourcesSnapshot,
               }
             } else {
-              console.log('📝 [缓存创建] 新建缓存:', {
+              log('📝 [缓存创建] 新建缓存:', {
                 query,
                 resultCount: newResults.length,
                 completedApis: completedApiIds
@@ -266,14 +267,16 @@ export const useSearchStore = create<SearchStore>()(
                 })
 
                 if (oldestKey) {
-                  console.log('🗑️ [缓存清理] 删除最旧的缓存:', oldestKey)
+                  log('🗑️ [缓存清理] 删除最旧的缓存:', oldestKey)
                   delete state.searchResultsCache[oldestKey]
                 }
               }
 
               state.searchResultsCache[query] = {
-                results: newResults,
-                completedApiIds,
+                // 拷贝一份再入库：immer 会冻结存进去的对象，
+                // 调用方后续还要往 completedApiIds 里 push
+                results: [...newResults],
+                completedApiIds: [...completedApiIds],
                 isComplete,
                 timestamp: Date.now(),
                 videoSourcesSnapshot,
@@ -308,7 +311,7 @@ export const useSearchStore = create<SearchStore>()(
             })
 
             if (removedCount > 0) {
-              console.log(`清理了 ${removedCount} 个过期缓存`)
+              log(`清理了 ${removedCount} 个过期缓存`)
             }
           })
         },

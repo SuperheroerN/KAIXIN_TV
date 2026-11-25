@@ -4,18 +4,24 @@ import '@/styles/main.css'
 import { HeroUIProvider, ToastProvider } from '@heroui/react'
 import App from '@/App'
 import MyRouter from '@/router/MyRouter'
+import ErrorBoundary from '@/components/common/ErrorBoundary'
 import { Toaster } from '@/components/ui/sonner'
+import { formatDocumentTitle } from '@/config/site.config'
+
+document.title = formatDocumentTitle()
 
 const root = document.getElementById('root')!
 
 const app = (
-  <HeroUIProvider>
-    <ToastProvider placement="top-center" toastOffset={68} />
-    <MyRouter>
-      <App />
-    </MyRouter>
-    <Toaster richColors position="top-center" />
-  </HeroUIProvider>
+  <ErrorBoundary>
+    <HeroUIProvider>
+      <ToastProvider placement="top-center" toastOffset={68} />
+      <MyRouter>
+        <App />
+      </MyRouter>
+      <Toaster richColors position="top-center" />
+    </HeroUIProvider>
+  </ErrorBoundary>
 )
 
-createRoot(root).render(import.meta.env.DEVELOPMENT ? <StrictMode>{app}</StrictMode> : app)
+createRoot(root).render(import.meta.env.DEV ? <StrictMode>{app}</StrictMode> : app)
