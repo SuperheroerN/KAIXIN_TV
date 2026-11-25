@@ -40,6 +40,35 @@ function looksLikeHtml(body: string): boolean {
   return head.startsWith('<!doctype html') || head.startsWith('<html')
 }
 
+// 有的源站把 ?wd= 这类查询参数当成攻击特征，会回 Cloudflare 人机验证页（403 + HTML）；
+// 同样的参数放进 POST 表单通常能过，所以只在这种响应上做一次重试
+const CHALLENGE_PATTERN = /just a moment|cf-chl|attention required|checking your browser/i
+
+function looksLikeChallenge(status: number, contentType: string | null, body: string): boolean {
+  if (status !== 403 && status !== 503) return false
+  if (!contentType || !contentType.toLowerCase().includes('text/html')) return false
+  return CHALLENGE_PATTERN.test(body.slice(0, 2048))
+}
+
+async function retryAsPostForm(
+  target: URL,
+  headers: Record<string, string>,
+): Promise<Response | null> {
+  const body = target.search.replace(/^\?/, '')
+  if (!body) return null
+
+  try {
+    return await fetch(`${target.origin}${target.pathname}`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+      signal: AbortSignal.timeout(15000),
+    })
+  } catch {
+    return null
+  }
+}
+
 // 按内容类型决定缓存策略：图片长缓存，JSON/文本不缓存，流媒体中等
 export function cacheControlFor(contentType: string | null): string {
   const type = (contentType ?? '').toLowerCase()
@@ -51,7 +80,7 @@ export function cacheControlFor(contentType: string | null): string {
 
 // 统一的代理处理逻辑
 export async function handleProxyRequest(targetUrl: string): Promise<Response> {
-  parseSafeTarget(targetUrl)
+  const target = parseSafeTarget(targetUrl)
 
   // 根据目标URL设置不同的请求头
   const headers: Record<string, string> = {
@@ -72,11 +101,21 @@ export async function handleProxyRequest(targetUrl: string): Promise<Response> {
   const timeoutId = setTimeout(() => controller.abort(), 30000) // 30秒超时
 
   try {
-    const response = await fetch(targetUrl, {
+    let response = await fetch(targetUrl, {
       headers,
       signal: controller.signal,
     })
     clearTimeout(timeoutId)
+
+    if (response.status === 403 || response.status === 503) {
+      const challengeBody = await response.clone().text()
+      if (looksLikeChallenge(response.status, response.headers.get('content-type'), challengeBody)) {
+        const retried = await retryAsPostForm(target, headers)
+        if (retried && !looksLikeChallenge(retried.status, retried.headers.get('content-type'), '')) {
+          response = retried
+        }
+      }
+    }
 
     if (isHtmlResponse(response.headers.get('content-type'))) {
       const body = await response.text()

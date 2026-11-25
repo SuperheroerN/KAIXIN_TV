@@ -130,8 +130,20 @@
 - **回归**：`tsc --noEmit` 0 error；`eslint` 0 error（1 条既有 warning）；`vite build` 通过。
 - **回滚**：`git revert <本次提交>`。
 
+### 2026-11-25 / E-08 · 源站 WAF 拦截 `?wd=` 导致该源搜索全灭
+
+- **原始问题**：无尽资源（`api.wujinapi.me`）在站点里搜任何关键词都返回 0 条，控制台里该源搜索失败。
+- **根本原因**：源站的 Cloudflare WAF 把带 `wd=` 的查询参数当成攻击特征，GET 请求一律回 `403` + 人机验证页（`Just a moment...`）；同一批参数放进 POST 表单则是 `200`，正常返回 9 条。代理只发 GET，拿到 403 HTML 后被"HTML 不转发"规则挡成 502。它的详情接口（`ac=videolist&ids=`）一直是好的，所以只有"搜不到、点不进"。
+- **修复方案**：代理收到 `403/503` 且响应是 HTML、内容像 Cloudflare 验证页时，把查询串原样搬到 POST 表单重试一次；重试仍被拦、或原 URL 没有查询参数，就保留原响应不额外发请求。生产函数与开发中间件同步改。
+- **修改文件**：`functions/proxy.ts`、`src/utils/proxy.ts`、`tests/proxyChallengeRetry.test.mjs`（新增）
+- **验证**：
+  - 直接调用 `functions/proxy.ts` 的 `onRequest` 发真实请求：无尽搜索 `200` / 9 条（修复前 `502`）、详情 `200` / 1 条；apibfzy、猫眼、zuidapi 均 `200`，无回归。
+  - 单测 5 条：验证页触发一次 POST 且参数搬对、普通 403 HTML 不重试、重试仍被拦时回落原响应、无查询参数不重试、正常 JSON 不产生额外请求。
+- **回归**：`npm test` 23/23；`tsc --noEmit` 0 error；`eslint` 0 error；`vite build` 通过。
+- **回滚**：`git revert <本次提交>`。
+
 ## 5. 本轮总结
 
-- 共修复 8 项（D-01、P-01、P-02、P-04、P-05、C-01/E-03、D-02/P-03、D-03、E-02、E-07、P-06、弹窗溢出、D-09），新增 4 个模块/测试文件。
-- `tsc --noEmit` 通过；`eslint` 0 error（1 条既有 warning，位于 shadcn 生成的 `button.tsx`）；`vite build` 通过；`npm test` 18/18。
+- 共修复 9 项（D-01、P-01、P-02、P-04、P-05、C-01/E-03、D-02/P-03、D-03、E-02、E-07、P-06、弹窗溢出、D-09），新增 4 个模块/测试文件。
+- `tsc --noEmit` 通过；`eslint` 0 error（1 条既有 warning，位于 shadcn 生成的 `button.tsx`）；`vite build` 通过；`npm test` 23/23。
 - 未修复项见 §2 队列。
