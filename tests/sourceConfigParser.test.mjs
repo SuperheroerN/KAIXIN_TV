@@ -116,6 +116,16 @@ test('同一 URL 只保留一个源', () => {
   assert.equal(sources[0].name, '猫眼资源')
 })
 
+test('行尾粘着的 # 注释不会污染最后一条源', () => {
+  const raw = `猫眼资源|${SITE_A},U酷资源|${SITE_D}# 已剔除：新浪资源（Node 侧连接超时）`
+  const { sources } = parseSourceConfig(raw)
+  assert.deepEqual(
+    sources.map(s => s.name),
+    ['猫眼资源', 'U酷资源'],
+  )
+  assert.equal(sources[1].url, SITE_D)
+})
+
 test('只有注释或空值时返回空列表', () => {
   assert.deepEqual(parseSourceConfig('').sources, [])
   assert.deepEqual(parseSourceConfig('   ').sources, [])

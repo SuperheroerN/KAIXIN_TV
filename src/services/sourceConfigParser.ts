@@ -35,7 +35,8 @@ const buildSource = (
   options: SourceParseOptions,
 ): VideoApi | null => {
   const sourceName = name.trim()
-  const sourceUrl = url.trim()
+  // 行尾粘上的 # 注释要切掉，否则整条地址都算非法
+  const sourceUrl = url.split('#')[0].trim()
 
   if (!sourceName || INVALID_NAME.test(sourceName)) return null
   if (!HTTP_URL.test(sourceUrl)) return null
