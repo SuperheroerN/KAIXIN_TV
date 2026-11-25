@@ -105,8 +105,20 @@
 - **是否引入新问题**：无。
 - **回滚**：`cp ~/.capy/work/kx/backup/SearchResult.tsx.orig src/pages/SearchResult.tsx`
 
+### 2026-11-25 / UI · 批量测速弹窗内容溢出到卡片外
+
+- **原始问题**：批量测试弹窗里，结果列表的下半部分渲染到白色卡片之外，盖住下层表单，看不清也点不到。
+- **根本原因**：`DialogContent` 的移动端定位类 `bottom-0 right-0` 在桌面端没有被取消，桌面端又设置了 `top: 50%`，于是元素高度被拉伸成视口的 50%（实测 648px 视口 → 324px 高），而内容实际需要 494px，且 `overflow: visible`，内容直接溢出到卡片外。
+- **修复方案**：桌面端补 `sm:bottom-auto sm:right-auto`，恢复按内容自适应高度；同时给弹窗内容加 `max-h-[90dvh] overflow-y-auto`，短屏时在弹窗内部滚动而不是溢出。
+- **修改文件**：`src/components/ui/dialog.tsx`
+- **测试**：
+  - 1280×800：弹窗高 518px、内容高 518px，内部滚动区 384px，子元素最低点比卡片底部高 25px（无溢出）。
+  - 1024×560：弹窗被限制在 90dvh（367px）并在内部滚动，内容不再绘制到卡片外。
+- **回归**：弹窗仍居中显示；其他使用同一容器的弹窗（导入源、确认框）不受影响。
+- **回滚**：`cp ~/.capy/work/kx/backup/dialog.tsx.orig src/components/ui/dialog.tsx`
+
 ## 5. 本轮总结
 
-- 修复 5 项（D-02/P-03、D-03、E-02、E-07、P-06），新增 1 个纯函数模块、1 个测试文件、6 条测试。
+- 修复 6 项（D-02/P-03、D-03、E-02、E-07、P-06、弹窗溢出），新增 1 个纯函数模块、1 个测试文件、6 条测试。
 - `tsc --noEmit` 通过；`eslint` 0 error（1 条既有 warning，位于 shadcn 生成的 `button.tsx`）；`vite build` 通过；`npm test` 6/6。
 - 未修复项见 §2 队列。
