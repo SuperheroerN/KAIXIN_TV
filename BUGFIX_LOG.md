@@ -117,8 +117,21 @@
 - **回归**：弹窗仍居中显示；其他使用同一容器的弹窗（导入源、确认框）不受影响。
 - **回滚**：`cp ~/.capy/work/kx/backup/dialog.tsx.orig src/components/ui/dialog.tsx`
 
+### 2026-11-25 / D-09 · 环境变量里的视频源被解析成"乱源"
+
+- **原始问题**：在 Cloudflare Pages 的 `VITE_INITIAL_VIDEO_SOURCES` 里粘贴整段 `.env` 后，设置页出现名为 `# 本地开发用的视频源（可自行增删，多个源用英文逗号分隔）# 已剔除：……VITE_INITIAL_VIDEO_SOURCES=猫眼资源` 的视频源，`U酷资源` 的地址尾部还粘上了站点品牌配置。
+- **根本原因**：`loadInitialVideoSources` 只做 `split(',')` + `split('|')`，既不认 `.env` 注释行、不认 `NAME=` 前缀，也不校验 URL。整段 `.env` 里没有英文逗号的注释行会被并进后一条，于是注释、赋值前缀被当成源名称，最后一条源的 URL 又被后续品牌配置污染。实测真实 `.env`：4 个源里 2 个名称/地址是脏的。
+- **修复方案**：抽出纯函数模块 `src/services/sourceConfigParser.ts`。先按行归一化（丢弃 `#` 注释行、去掉 `NAME=` 前缀；存在 `VITE_INITIAL_VIDEO_SOURCES=` 时只取该行），再区分 JSON 与 `名称|URL` 两种格式；名称含 `#`、`=`、换行，地址非 `http(s)`，或地址重复的条目直接丢弃。`apiStore.initializeEnvSources` 在"配了环境变量但解析不出源"时也清掉残留的 `env_source_*`，避免旧脏源一直挂在页面上。
+- **修改文件**：`src/services/sourceConfigParser.ts`（新增）、`src/config/api.config.ts`、`src/store/apiStore.ts`、`tests/sourceConfigParser.test.mjs`（新增）
+- **验证**：
+  - 用项目真实 `.env` 整段文本过新解析器 → `simple` 格式、4 个源，名称与地址均干净（`env_source_0..3`）。
+  - 单行正确填法同样解析出 4 个源。
+  - 新增 12 条单测，覆盖整段 `.env`、逐行格式、JSON（含前缀/多行）、引号、脏条目、重复 URL、空值；`npm test` 18/18。
+- **回归**：`tsc --noEmit` 0 error；`eslint` 0 error（1 条既有 warning）；`vite build` 通过。
+- **回滚**：`git revert <本次提交>`。
+
 ## 5. 本轮总结
 
-- 修复 6 项（D-02/P-03、D-03、E-02、E-07、P-06、弹窗溢出），新增 1 个纯函数模块、1 个测试文件、6 条测试。
-- `tsc --noEmit` 通过；`eslint` 0 error（1 条既有 warning，位于 shadcn 生成的 `button.tsx`）；`vite build` 通过；`npm test` 6/6。
+- 共修复 8 项（D-01、P-01、P-02、P-04、P-05、C-01/E-03、D-02/P-03、D-03、E-02、E-07、P-06、弹窗溢出、D-09），新增 4 个模块/测试文件。
+- `tsc --noEmit` 通过；`eslint` 0 error（1 条既有 warning，位于 shadcn 生成的 `button.tsx`）；`vite build` 通过；`npm test` 18/18。
 - 未修复项见 §2 队列。

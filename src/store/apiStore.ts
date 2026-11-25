@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 import type { VideoApi } from '@/types'
-import { getInitialVideoSources } from '@/config/api.config'
+import { getInitialVideoSources, hasInitialSourceConfig } from '@/config/api.config'
 import { v4 as uuidv4 } from 'uuid'
 import { useSettingStore } from './settingStore'
 
@@ -92,7 +92,9 @@ export const useApiStore = create<ApiStore>()(
 
         initializeEnvSources: async () => {
           const envSources = await getInitialVideoSources()
-          if (envSources.length === 0) return
+          // 没配环境变量：保留用户自己维护的列表
+          // 配了但一个源都解析不出来：说明配置有误，同样清掉上次残留的 env_source_*
+          if (envSources.length === 0 && !hasInitialSourceConfig()) return
 
           set(state => {
             // 环境变量源始终以 .env 为准（增删都会同步），用户自己添加的源保留
